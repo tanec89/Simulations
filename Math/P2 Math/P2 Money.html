@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>P2 Money Shopping Trip</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2a41; font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; color: #1b2a41; user-select: none; -webkit-user-select: none; }
+  .px { font-family: 'Press Start 2P', 'Courier New', monospace; }
+  #app { position: relative; height: 100%; max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
+
+  /* ---------- map screen ---------- */
+  #main { flex: 1; min-height: 0; display: flex; }
+  #stage { flex: 1; min-width: 0; position: relative; background: #2d6a3e; touch-action: none; }
+  canvas { width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
+  #side { width: 260px; overflow-y: auto; background: #f4ecd8; border-left: 4px solid #1b2a41; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .panel { background: #fff; border: 3px solid #1b2a41; border-radius: 10px; padding: 8px 10px; box-shadow: 0 3px 0 rgba(27,42,65,.25); }
+  .panel h3 { margin: 0 0 6px; font: 10px 'Press Start 2P', monospace; color: #c0392b; }
+  #sideTotal { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  #list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #list li { font-size: 17px; font-weight: 700; line-height: 1.15; padding: 4px 6px; border-radius: 8px; background: #fff7d6; }
+  #list li small { display: block; font-size: 13px; font-weight: 600; color: #52647d; }
+  #list li.done { background: #d8f5df; color: #2e7d4f; text-decoration: line-through; }
+  #list li.done small { text-decoration: none; }
+  #sideStars { font-size: 20px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; }
+  #muteBtn { border: 2px solid #1b2a41; background: #fff; border-radius: 8px; font-size: 18px; padding: 0 8px; cursor: pointer; }
+  #mapmsg { position: absolute; left: 12px; right: 12px; bottom: 12px; display: none; z-index: 3; font-size: clamp(13px, 3.4vw, 20px); padding: 8px 12px; }
+  #mapmsg.show { display: block; }
+
+  #dpad { position: fixed; left: 14px; bottom: 14px; width: 150px; height: 150px; display: none; grid-template: repeat(3, 1fr) / repeat(3, 1fr); z-index: 4; opacity: .85; touch-action: none; }
+  body.touch #dpad.on { display: grid; }
+  #dpad button { border: 3px solid #1b2a41; background: #fff; border-radius: 12px; font-size: 22px; color: #1b2a41; touch-action: none; padding: 0; }
+  #dpad button.down { background: #ffc93c; }
+  #dpad .u { grid-area: 1 / 2; } #dpad .l { grid-area: 2 / 1; } #dpad .r { grid-area: 2 / 3; } #dpad .d { grid-area: 3 / 2; }
+
+  @media (orientation: portrait) {
+    #main { flex-direction: column; }
+    #stage { flex: none; aspect-ratio: 640 / 448; }
+    #side { width: auto; flex: 1; min-height: 0; border-left: 0; border-top: 4px solid #1b2a41; }
+    body.touch #side { padding-right: 176px; }
+    #dpad { left: auto; right: 14px; }
+  }
+
+  /* ---------- Pokemon-style text box ---------- */
+  .dialog { background: #fff; border: 4px solid #1b2a41; border-radius: 12px; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 6px #7fb2e5; padding: 14px 16px; font-size: clamp(15px, 4vw, 20px); font-weight: 700; line-height: 1.3; }
+
+  /* ---------- overlays ---------- */
+  .overlay { position: absolute; inset: 0; display: none; z-index: 10; overflow-y: auto; touch-action: pan-y; }
+  .overlay.show { display: block; }
+  .center { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; text-align: center; }
+  #title, #end { background: linear-gradient(180deg, #7fd0ff, #bfe9ff 55%, #7ec850 55%, #5fae3c); }
+  #title h1, #end h1 { margin: 0; font: 400 clamp(20px, 4.4vw, 38px)/1.4 'Press Start 2P', monospace; color: #fff; text-shadow: 3px 3px 0 #1b2a41, -2px -2px 0 #1b2a41, 2px -2px 0 #1b2a41, -2px 2px 0 #1b2a41; }
+  .hero { font-size: 60px; line-height: 1; }
+  .card { background: #fff; border: 4px solid #1b2a41; border-radius: 14px; padding: 12px 18px; max-width: 560px; font-size: 19px; font-weight: 600; line-height: 1.35; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .opt { font: 800 20px 'Baloo 2', sans-serif; padding: 6px 16px; border-radius: 14px; border: 4px solid #1b2a41; background: #fff; color: #1b2a41; cursor: pointer; line-height: 1.15; }
+  .opt small { display: block; font-size: 13px; font-weight: 600; }
+  .opt.sel { background: #ffc93c; }
+  .btn { font: 400 16px 'Press Start 2P', monospace; padding: 14px 24px; border: 4px solid #1b2a41; border-radius: 14px; background: #2ecc71; color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.3); box-shadow: 0 5px 0 #1b2a41; cursor: pointer; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #1b2a41; }
+  .btn.alt { background: #3b82f6; }
+  a.menu { color: #1b2a41; font-weight: 700; font-size: 16px; }
+  #endStars { font-size: 54px; letter-spacing: 6px; }
+
+  /* ---------- scene (shop / home) ---------- */
+  #scene { background: #ffe9c4; }
+  .scene-inner { max-width: 780px; margin: 0 auto; padding: 10px 12px 18px; display: flex; flex-direction: column; gap: 10px; min-height: 100%; }
+  #scTitle { align-self: center; font: 14px 'Press Start 2P', monospace; color: #fff; padding: 10px 18px; border: 4px solid #1b2a41; border-radius: 10px; box-shadow: 0 4px 0 #1b2a41; text-shadow: 2px 2px 0 rgba(0,0,0,.35); }
+  .sc-row { display: flex; align-items: center; gap: 10px; }
+  #scKeeper { font-size: clamp(40px, 12vw, 64px); line-height: 1; flex: none; }
+  #scSay { flex: 1; }
+  #scItems { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .item { background: #fff; border: 3px solid #1b2a41; border-radius: 12px; padding: 6px 12px; text-align: center; min-width: 96px; font: 700 17px 'Baloo 2', sans-serif; color: #1b2a41; line-height: 1.2; }
+  .item .ico { display: block; font-size: 40px; line-height: 1.15; }
+  .item .ico svg { width: 44px; height: 40px; vertical-align: middle; }
+  .tag { display: inline-block; margin-top: 2px; background: #ffe066; border: 2px solid #1b2a41; border-radius: 8px; padding: 0 8px; font-size: 22px; font-weight: 800; }
+  button.item { cursor: pointer; box-shadow: 0 4px 0 #1b2a41; }
+  button.item.wrong { opacity: .4; animation: shake .35s; pointer-events: none; }
+  button.item.right { background: #c9f7d6; }
+  .item.mini { min-width: 0; padding: 4px 10px; font-size: 15px; }
+  .item.mini .ico { font-size: 28px; }
+  .item.mini .ico svg { width: 30px; height: 28px; }
+  #scWork { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .eq { font-size: clamp(26px, 6vw, 40px); font-weight: 800; text-align: center; line-height: 1.2; }
+  .blank { display: inline-block; min-width: 3.4em; padding: 0 10px; border: 4px solid #1b2a41; border-radius: 12px; background: #fff; text-align: left; }
+  .blank.ok { background: #c9f7d6; border-color: #2e7d4f; }
+  .blank.shake { animation: shake .35s; background: #ffd9d9; }
+  .cursor { display: inline-block; width: 3px; height: .9em; background: #1b2a41; vertical-align: -0.08em; animation: blink 1s steps(1) infinite; }
+  .hint { min-height: 26px; font-size: 18px; font-weight: 700; color: #b03a2e; text-align: center; line-height: 1.25; max-width: 620px; }
+  .numpad { display: grid; width: 100%; max-width: 460px; grid-template-columns: repeat(6, 1fr) 1.4fr; gap: 6px; }
+  .numpad button { font: 800 26px 'Baloo 2', sans-serif; height: 50px; border: 3px solid #1b2a41; border-radius: 12px; background: #fff; color: #1b2a41; box-shadow: 0 3px 0 #1b2a41; cursor: pointer; padding: 0; }
+  .numpad button:active { transform: translateY(2px); box-shadow: 0 1px 0 #1b2a41; }
+  .numpad .ok { grid-column: 7; grid-row: 1 / span 2; height: auto; background: #2ecc71; color: #fff; }
+  .numpad .del { background: #ffd9d9; }
+  .numpad button:disabled { opacity: .3; }
+  .box { width: 100%; background: rgba(255,255,255,.65); border: 3px dashed #1b2a41; border-radius: 12px; padding: 8px 10px; }
+  .box.wallet { background: #8d5a2b; border: 4px solid #1b2a41; border-style: solid; }
+  .box.wallet .wlabel { color: #fff; }
+  .wlabel { font: 10px 'Press Start 2P', monospace; margin-bottom: 6px; line-height: 1.5; }
+  .wlabel b { font: 800 20px 'Baloo 2', sans-serif; margin-left: 6px; }
+  .pieces { --u: 1; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-height: calc(48px * var(--u)); }
+  .pieces.small { --u: .55; gap: 4px; }
+  .mny { border: 0; padding: 0; font: 800 calc(18px * var(--u)) 'Baloo 2', sans-serif; color: #fff; display: inline-flex; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,.5); flex: none; }
+  button.mny { cursor: pointer; }
+  .mny.note { width: calc(92px * var(--u)); height: calc(46px * var(--u)); border-radius: calc(5px * var(--u)); border: calc(3px * var(--u)) solid rgba(255,255,255,.75); outline: 2px solid #1b2a41; font-size: calc(22px * var(--u)); }
+  .mny.v5000 { background: linear-gradient(135deg, #2f6fb5, #6aa5e0 50%, #2f6fb5); }
+  .mny.v1000 { background: linear-gradient(135deg, #c0392b, #ef7d72 50%, #c0392b); }
+  .mny.v500 { background: linear-gradient(135deg, #2e8b57, #72cf9a 50%, #2e8b57); }
+  .mny.coin { border-radius: 50%; outline: 2px solid #1b2a41; }
+  .mny.v100 { width: calc(48px * var(--u)); height: calc(48px * var(--u)); background: radial-gradient(circle, #cfd4da 0 52%, #d4a017 54% 100%); color: #1b2a41; text-shadow: none; }
+  .mny.v50 { width: calc(44px * var(--u)); height: calc(44px * var(--u)); background: radial-gradient(circle at 35% 30%, #f6d365, #c8930f); }
+  .mny.v20 { width: calc(39px * var(--u)); height: calc(39px * var(--u)); background: radial-gradient(circle at 35% 30%, #eef1f4, #8e98a3); color: #1b2a41; text-shadow: none; font-size: calc(16px * var(--u)); }
+  .mny.v10 { width: calc(33px * var(--u)); height: calc(33px * var(--u)); background: radial-gradient(circle at 35% 30%, #eef1f4, #8e98a3); color: #1b2a41; text-shadow: none; font-size: calc(14px * var(--u)); }
+  .mny.pop { animation: pop .4s; }
+  .mny.new { animation: glow 1.2s 2; }
+  .mny.gone { animation: fly .45s forwards; }
+  @keyframes pop { from { transform: translateY(-60px) scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes fly { to { transform: translateY(-80px) scale(.5); opacity: 0; } }
+  @keyframes glow { 50% { box-shadow: 0 0 0 6px #ffe066; transform: scale(1.12); } }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  @keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="main">
+    <div id="stage">
+      <canvas id="cv" width="1280" height="896"></canvas>
+      <div id="mapmsg" class="dialog"></div>
+    </div>
+    <aside id="side">
+      <div class="panel"><h3>MY WALLET</h3><div id="sideTotal">$0.00</div><div id="sideWallet" class="pieces small"></div></div>
+      <div class="panel"><h3>SHOPPING LIST</h3><ul id="list"></ul></div>
+      <div class="panel" id="sideStars"><span id="starTxt">⭐ 0</span><button id="muteBtn" title="Sound on/off">🔊</button></div>
+    </aside>
+  </div>
+  <div id="dpad">
+    <button class="u" data-d="up">▲</button><button class="l" data-d="left">◀</button>
+    <button class="r" data-d="right">▶</button><button class="d" data-d="down">▼</button>
+  </div>
+
+  <div id="title" class="overlay show"><div class="center">
+    <div class="hero">👧🛍️</div>
+    <h1>SHOPPING TRIP</h1>
+    <div class="card">Mum gives you some money and a shopping list.<br>Walk to the shops, pay with your notes and coins, and work out your change!</div>
+    <div class="row" id="levels">
+      <button class="opt sel" data-lv="easy">Easy<small>3 shops · up to $13</small></button>
+      <button class="opt" data-lv="medium">Medium<small>4 shops · up to $30</small></button>
+      <button class="opt" data-lv="hard">Hard<small>5 shops · up to $70</small></button>
+    </div>
+    <button class="btn" id="startBtn">START</button>
+    <a class="menu" href="../../index.html">← All simulations</a>
+  </div></div>
+
+  <div id="scene" class="overlay"><div class="scene-inner">
+    <div id="scTitle"></div>
+    <div class="sc-row"><div id="scKeeper"></div><div id="scSay" class="dialog"></div></div>
+    <div id="scItems"></div>
+    <div id="scWork"></div>
+    <div class="box wallet"><div class="wlabel">MY WALLET<b id="scWalletTotal"></b></div><div id="scWallet" class="pieces"></div></div>
+  </div></div>
+
+  <div id="end" class="overlay"><div class="center">
+    <h1>WELL DONE!</h1>
+    <div id="endStars"></div>
+    <div class="card" id="endStats"></div>
+    <button class="btn" id="againBtn">PLAY AGAIN</button>
+  </div></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const f = c => '$' + (c / 100).toFixed(2);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const sum = a => a.reduce((s, p) => s + p.v, 0);
+
+// ---------- sound ----------
+let actx, muted = false;
+function beep(freq, dur = .09, type = 'square', vol = .04) {
+  if (muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(actx.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(.0001, actx.currentTime + dur); o.stop(actx.currentTime + dur);
+  } catch (e) {}
+}
+const sfxGood = () => { beep(660, .1); setTimeout(() => beep(880, .15), 100); };
+const sfxBad = () => beep(160, .25, 'sawtooth');
+const sfxCoin = () => beep(1200, .07, 'triangle', .06);
+$('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = muted ? '🔇' : '🔊'; };
+
+// ---------- data ----------
+const DENOMS = [5000, 1000, 500, 100, 50, 20, 10];
+const SPLIT = { 5000: [1000, 1000, 1000, 1000, 1000], 1000: [500, 500], 500: [100, 100, 100, 100, 100], 100: [50, 50], 50: [20, 20, 10], 20: [10, 10] };
+const LEVELS = {
+  easy:   { shops: 3, lo: 40,  hi: 250,  cmp: 2, extra: [50, 300],  splits: 1 },
+  medium: { shops: 4, lo: 80,  hi: 480,  cmp: 3, extra: [100, 500], splits: 2 },
+  hard:   { shops: 5, lo: 150, hi: 1250, cmp: 3, extra: [200, 900], splits: 2 }
+};
+const ERASER = '<svg viewBox="0 0 44 40"><g transform="rotate(-20 22 20)"><rect x="5" y="11" width="34" height="18" rx="4" fill="#f48fb1" stroke="#1b2a41" stroke-width="2"/><rect x="5" y="11" width="13" height="18" rx="4" fill="#64b5f6" stroke="#1b2a41" stroke-width="2"/></g></svg>';
+// [name, icon, how dear it is from 0 (cheap) to 1 (dear)]
+const SHOPS = {
+  super:  { keeper: '🧑‍💼', items: [['milk', '🥛', .5], ['eggs', '🥚', .6], ['rice', '🍚', .9], ['juice', '🧃', .3], ['cheese', '🧀', .8], ['noodles', '🍜', .2], ['ice cream', '🍦', .7], ['biscuits', '🍪', .4]] },
+  bakery: { keeper: '👨‍🍳', items: [['bread', '🍞', .5], ['croissant', '🥐', .4], ['cupcake', '🧁', .3], ['doughnut', '🍩', .2], ['pie', '🥧', .8], ['cake', '🍰', .9]] },
+  book:   { keeper: '👩‍🏫', items: [['eraser', ERASER, .1], ['pencil', '✏️', .2], ['ruler', '📏', .3], ['notebook', '📓', .6], ['crayons', '🖍️', .8], ['scissors', '✂️', .7]] },
+  toy:    { keeper: '🧑‍🎨', items: [['teddy bear', '🧸', 1], ['ball', '⚽', .5], ['kite', '🪁', .7], ['yo-yo', '🪀', .3], ['puzzle', '🧩', .8], ['toy car', '🚗', .6]] },
+  fruit:  { keeper: '👩‍🌾', items: [['apples', '🍎', .4], ['bananas', '🍌', .3], ['grapes', '🍇', .8], ['watermelon', '🍉', .9], ['oranges', '🍊', .5], ['strawberries', '🍓', .7], ['mango', '🥭', .6]] }
+};
+const BRANDS = ['Sunny', 'Happy', 'Jolly', 'Lucky', 'Super', 'Star'];
+const BLD = [
+  { id: 'super',  name: 'SUPERMARKET', x: 2,  y: 1, roof: '#e74c3c', icon: '🛒' },
+  { id: 'bakery', name: 'BAKERY',      x: 8,  y: 1, roof: '#e67e22', icon: '🥖' },
+  { id: 'book',   name: 'BOOKSHOP',    x: 14, y: 1, roof: '#3498db', icon: '📚' },
+  { id: 'toy',    name: 'TOY SHOP',    x: 2,  y: 8, roof: '#9b59b6', icon: '🧸' },
+  { id: 'home',   name: 'HOME',        x: 8,  y: 8, roof: '#7f8c8d', icon: '🏠' },
+  { id: 'fruit',  name: 'FRUIT STALL', x: 14, y: 8, roof: '#27ae60', icon: '🍎' }
+];
+const bld = id => BLD.find(b => b.id === id);
+
+// ---------- game state ----------
+let level = 'easy', mode = 'title', errands = [], wallet = [], pid = 0;
+let startMoney = 0, counted = false, stats = { q: 0, first: 0 };
+const newPiece = v => ({ id: ++pid, v });
+const breakdown = c => { const out = []; for (const d of DENOMS) while (c >= d) { out.push(d); c -= d; } return out; };
+
+function newGame() {
+  const L = LEVELS[level];
+  const price = r => { r = Math.min(1, Math.max(0, r + (Math.random() - .5) * .3)); return Math.round((L.lo + (L.hi - L.lo) * r) / 10) * 10; };
+  const mk = it => ({ name: it[0], icon: it[1], price: price(it[2]) });
+  const types = ['single', 'compare', 'double'];
+  while (types.length < L.shops) types.push(pick(['single', 'compare', 'double']));
+  shuffle(types);
+  let toDollars = Math.random() < .5;
+  errands = shuffle(Object.keys(SHOPS)).slice(0, L.shops).map((shop, i) => {
+    const pool = shuffle(SHOPS[shop].items.slice()), type = types[i];
+    const e = { shop, type, done: false, convert: null, items: [mk(pool[0])] };
+    if (type === 'double') { e.items.push(mk(pool[1])); if (e.items[1].price === e.items[0].price) e.items[1].price += 10; }
+    if (type === 'compare') e.options = cmpOptions(e.items[0], L.cmp);
+    if (type === 'single') { e.convert = toDollars ? 'toDollars' : 'toCents'; toDollars = !toDollars; }
+    e.cost = e.items.reduce((s, it) => s + it.price, 0);
+    return e;
+  });
+  pick(errands.filter(e => e.type !== 'single')).convert = 'toCents';
+
+  startMoney = errands.reduce((s, e) => s + e.cost, 0) + rnd(L.extra[0] / 10, L.extra[1] / 10) * 10;
+  let vals = breakdown(startMoney);
+  for (let i = 0; i < L.splits; i++) {
+    const can = vals.filter(v => v > 10);
+    if (!can.length) break;
+    const v = pick(can);
+    if (vals.length + SPLIT[v].length - 1 > 12) continue;
+    vals.splice(vals.indexOf(v), 1, ...SPLIT[v]);
+  }
+  wallet = vals.map(newPiece);
+  counted = false; stats = { q: 0, first: 0 };
+  player.tx = 9; player.ty = 11; player.dir = 'down'; player.moving = false;
+  renderSide();
+}
+
+// the cheapest brand keeps the item's price; the others are a little dearer
+function cmpOptions(item, n) {
+  const p = item.price, c = p % 100, prices = new Set([p]);
+  if (n > 2 && c < 90) prices.add(p + rnd(1, (90 - c) / 10) * 10);        // same dollars, more cents
+  if (c > 0) prices.add(p + 100 - rnd(1, c / 10) * 10);                    // more dollars, fewer cents
+  while (prices.size < n) prices.add(p + rnd(1, 15) * 10);
+  const names = shuffle(BRANDS.slice());
+  return shuffle([...prices].slice(0, n)).map((price, i) => ({ brand: names[i], price }));
+}
+
+// ---------- rendering money ----------
+function pieceHTML(p, tag = 'span', cls = '') {
+  const label = p.v >= 100 ? '$' + p.v / 100 : p.v + '¢';
+  return `<${tag} class="mny ${p.v >= 500 ? 'note' : 'coin'} v${p.v} ${cls}" data-id="${p.id}">${label}</${tag}>`;
+}
+const sorted = a => a.slice().sort((x, y) => y.v - x.v || x.id - y.id);
+
+function renderSide() {
+  $('sideTotal').textContent = counted ? f(sum(wallet)) : '$ ?';
+  $('sideWallet').innerHTML = sorted(wallet).map(p => pieceHTML(p)).join('');
+  $('list').innerHTML = errands.map(e => `<li class="${e.done ? 'done' : ''}">${e.done ? '✅ ' : ''}${errandLabel(e)}<small>${cap(bld(e.shop).name.toLowerCase())}</small></li>`).join('');
+  $('starTxt').textContent = '⭐ ' + stats.first;
+}
+function errandLabel(e) {
+  if (e.type === 'compare') return 'Cheapest ' + e.items[0].name;
+  return e.items.map(it => cap(it.name)).join(' and ');
+}
+const icoHTML = it => `<span class="ico">${it.icon}</span>`;
+
+// ---------- scene helpers ----------
+function openScene(b, keeper) {
+  mode = 'scene'; held.length = 0; hideMsg();
+  $('scTitle').textContent = b.name; $('scTitle').style.background = b.roof;
+  $('scKeeper').textContent = keeper;
+  $('scItems').innerHTML = ''; $('scWork').innerHTML = '';
+  renderSceneWallet();
+  $('dpad').classList.remove('on');
+  $('scene').classList.add('show'); $('scene').scrollTop = 0;
+}
+function closeScene() { $('scene').classList.remove('show'); mode = 'map'; $('dpad').classList.add('on'); renderSide(); }
+const say = html => { $('scSay').innerHTML = html; };
+function renderSceneWallet(o = {}) {
+  const rest = sorted(wallet).filter(p => !(o.sel && o.sel.has(p.id)));
+  $('scWalletTotal').textContent = o.hideTotal ? '' : f(sum(rest));
+  $('scWallet').innerHTML = rest.map(p => pieceHTML(p, o.sel ? 'button' : 'span', o.fresh && o.fresh.has(p.id) ? 'new' : '')).join('') || '<span style="color:#fff;font-weight:700">Empty</span>';
+}
+function showItems(items, centsTag) {
+  $('scItems').innerHTML = items.map(it => `<div class="item">${icoHTML(it)}${cap(it.name)}<br><span class="tag">${centsTag ? it.price + '¢' : f(it.price)}</span></div>`).join('');
+}
+function next(label) {
+  return new Promise(res => {
+    const b = document.createElement('button');
+    b.className = 'btn primary'; b.textContent = label;
+    b.onclick = () => { b.remove(); res(); };
+    $('scWork').appendChild(b);
+  });
+}
+
+// ---------- number-pad question ----------
+let pad = null;   // the active question's key handler
+function ask({ eq, unit, answer, hints }) {
+  return new Promise(res => {
+    stats.q++;
+    let s = '', wrong = 0, done = false;
+    const money = unit === 'money';
+    $('scWork').innerHTML = `<div class="eq">${eq} <span class="blank" id="blank"></span></div><div class="hint" id="hint"></div>
+      <div class="numpad">${'12345'.split('').map(d => `<button data-k="${d}">${d}</button>`).join('')}<button class="del" data-k="Backspace">⌫</button>
+      <button class="ok" data-k="Enter">OK</button>${'67890'.split('').map(d => `<button data-k="${d}">${d}</button>`).join('')}<button data-k="." ${money ? '' : 'disabled'}>.</button></div>`;
+    const blank = $('blank'), hint = $('hint');
+    const show = () => { blank.innerHTML = (money ? '$' : '') + s + '<span class="cursor"></span>' + (money ? '' : '¢'); };
+    show();
+    const key = k => {
+      if (done) return;
+      blank.classList.remove('shake');
+      if (/^\d$/.test(k)) {
+        const dot = s.indexOf('.');
+        if (s.length < 6 && (dot < 0 || s.length - dot <= 2)) s += k;
+      } else if (k === '.') { if (money && s && !s.includes('.')) s += '.'; }
+      else if (k === 'Backspace') s = s.slice(0, -1);
+      else if (k === 'Enter') return submit();
+      show();
+    };
+    const submit = () => {
+      if (!s) return;
+      if (money && !/^\d+\.\d\d$/.test(s)) {
+        hint.textContent = 'Money needs a dot and 2 digits after it, like $2.50 or $3.00.';
+        return;
+      }
+      const val = money ? Math.round(parseFloat(s) * 100) : parseInt(s, 10);
+      if (val === answer) {
+        done = true; pad = null; sfxGood();
+        if (!wrong) stats.first++;
+        blank.classList.add('ok'); blank.textContent = (money ? '$' : '') + s + (money ? '' : '¢');
+        hint.style.color = '#2e7d4f'; hint.textContent = wrong ? 'Correct!' : 'Correct on the first try! ⭐';
+        setTimeout(() => res(!wrong), 900);
+      } else {
+        wrong++; sfxBad();
+        hint.textContent = 'Not quite. ' + hints[Math.min(wrong, hints.length) - 1];
+        blank.classList.remove('shake'); void blank.offsetWidth; blank.classList.add('shake');
+        s = ''; show();
+      }
+    };
+    $('scWork').querySelector('.numpad').onclick = e => { const k = e.target.dataset.k; if (k) key(k); };
+    pad = key;
+  });
+}
+
+const dollars = c => Math.floor(c / 100), cents = c => c % 100;
+function addHints(a, b) {
+  const cc = cents(a) + cents(b);
+  return ['Add the dollars first, then add the cents.',
+    `Dollars: $${dollars(a)} + $${dollars(b)}. Cents: ${cents(a)}¢ + ${cents(b)}¢.` + (cc >= 100 ? ' The cents make more than $1, because 100¢ = $1.00.' : ' Put them together.')];
+}
+function subHints(a, b) {
+  const h = [`Count on from ${f(b)} up to ${f(a)}.`];
+  if (cents(a) >= cents(b)) h.push(`Take away the dollars: $${dollars(a)} − $${dollars(b)}. Then the cents: ${cents(a)}¢ − ${cents(b)}¢. Put them together.`);
+  else {
+    const jump = 100 - cents(b), mid = b + jump;
+    h.push(mid === a ? `How many cents do you add to ${f(b)} to reach ${f(a)}?`
+      : `Jump 1: ${f(b)} + ${jump}¢ = ${f(mid)}. Jump 2: ${f(mid)} + ${f(a - mid)} = ${f(a)}. Add the two jumps.`);
+  }
+  return h;
+}
+function countHints() {
+  const big = sorted(wallet).filter(p => p.v >= 100).map(p => '$' + p.v / 100), small = sorted(wallet).filter(p => p.v < 100).map(p => p.v + '¢');
+  return ['Count the notes and $1 coins first to get the dollars. Then count the smaller coins to get the cents.',
+    (big.length ? 'Dollars: ' + big.join(' + ') + '. ' : '') + (small.length ? 'Cents: ' + small.join(' + ') + '.' : 'There are no cents, so write .00')];
+}
+
+// ---------- shop steps ----------
+function compare(e) {
+  return new Promise(res => {
+    stats.q++;
+    const it = e.items[0], best = Math.min(...e.options.map(o => o.price));
+    let wrong = 0;
+    $('scItems').innerHTML = e.options.map((o, i) => `<button class="item" data-i="${i}">${icoHTML(it)}${o.brand} ${it.name}<br><span class="tag">${f(o.price)}</span></button>`).join('');
+    $('scWork').innerHTML = '<div class="hint" id="hint"></div>';
+    $('scItems').onclick = ev => {
+      const btn = ev.target.closest('button.item'); if (!btn) return;
+      if (e.options[btn.dataset.i].price === best) {
+        $('scItems').onclick = null; sfxGood();
+        if (!wrong) stats.first++;
+        btn.classList.add('right');
+        $('hint').style.color = '#2e7d4f'; $('hint').textContent = wrong ? 'Correct!' : 'Correct on the first try! ⭐';
+        setTimeout(() => res(), 1000);
+      } else {
+        wrong++; sfxBad(); btn.classList.add('wrong');
+        $('hint').textContent = wrong === 1 ? 'Not quite. Compare the dollars first. The smaller number is cheaper.'
+          : 'If the dollars are the same, compare the cents.';
+      }
+    };
+  });
+}
+
+function pay(total) {
+  return new Promise(res => {
+    const sel = new Set();
+    $('scWork').innerHTML = `<div class="box"><div class="wlabel">ON THE COUNTER<b id="trayTotal"></b></div><div id="tray" class="pieces"></div></div>
+      <div class="hint" id="hint"></div><button class="btn primary" id="payBtn">PAY</button>`;
+    const draw = () => {
+      const on = sorted(wallet).filter(p => sel.has(p.id));
+      $('tray').innerHTML = on.map(p => pieceHTML(p, 'button')).join('') || '<span style="font-weight:700;color:#52647d">Tap the money in your wallet to put it here.</span>';
+      $('trayTotal').textContent = f(sum(on));
+      renderSceneWallet({ sel });
+    };
+    const toggle = ev => {
+      const b = ev.target.closest('button.mny'); if (!b) return;
+      const id = +b.dataset.id; sel.has(id) ? sel.delete(id) : sel.add(id);
+      sfxCoin(); $('hint').textContent = ''; draw();
+    };
+    $('scWallet').onclick = toggle; $('tray').onclick = toggle;
+    $('payBtn').onclick = async () => {
+      const paid = sum(wallet.filter(p => sel.has(p.id)));
+      if (paid < total) { sfxBad(); $('hint').textContent = paid ? `${f(paid)} is not enough. The price is ${f(total)}.` : 'Tap the notes and coins in your wallet first.'; return; }
+      $('scWallet').onclick = null; $('tray').onclick = null; $('payBtn').remove();
+      $('tray').querySelectorAll('.mny').forEach(m => m.classList.add('gone'));
+      wallet = wallet.filter(p => !sel.has(p.id));
+      await sleep(500);
+      renderSceneWallet();
+      res(paid);
+    };
+    draw();
+  });
+}
+
+async function giveChange(change) {
+  $('scWork').innerHTML = '<div class="box"><div class="wlabel">YOUR CHANGE<b id="chgTotal">$0.00</b></div><div id="chg" class="pieces"></div></div>';
+  const fresh = breakdown(change).map(newPiece);
+  let run = 0;
+  for (const p of fresh) {
+    await sleep(450);
+    $('chg').insertAdjacentHTML('beforeend', pieceHTML(p, 'span', 'pop'));
+    run += p.v; $('chgTotal').textContent = f(run); sfxCoin();
+  }
+  await sleep(900);
+  $('chg').querySelectorAll('.mny').forEach(m => { m.classList.remove('pop'); m.classList.add('gone'); });
+  await sleep(450);
+  wallet.push(...fresh);
+  $('scWork').innerHTML = '';
+  renderSceneWallet({ fresh: new Set(fresh.map(p => p.id)) });
+}
+
+async function runShop(b) {
+  const e = errands.find(x => x.shop === b.id);
+  openScene(b, SHOPS[b.id].keeper);
+  if (e.type === 'compare') {
+    say(`Welcome! Your list says the <b>cheapest</b> ${e.items[0].name}. Tap the one that costs the least.`);
+    await compare(e);
+  }
+  const total = e.cost, [a, c] = e.items;
+  showItems(e.items, e.convert === 'toDollars');
+  if (e.type === 'double') {
+    say(`Hello! You are buying ${a.name} and ${c.name}. How much do they cost altogether?`);
+    await ask({ eq: `${f(a.price)} + ${f(c.price)} =`, unit: 'money', answer: total, hints: addHints(a.price, c.price) });
+  }
+  if (e.convert === 'toDollars') {
+    say(`Hello! My price tag shows cents only: <b>${total}¢</b>. Can you write it in dollars?`);
+    await ask({ eq: `${total}¢ =`, unit: 'money', answer: total, hints: ['100¢ = $1.00', `${total}¢ = ${dollars(total) * 100}¢ + ${cents(total)}¢. Every 100¢ makes $1.`] });
+    showItems(e.items);
+  } else if (e.convert === 'toCents') {
+    say(`The price is <b>${f(total)}</b>. Quick quiz! How many cents is that?`);
+    await ask({ eq: `${f(total)} =`, unit: 'cents', answer: total, hints: ['$1.00 = 100¢', `$${dollars(total)} is ${dollars(total)} hundreds of cents. Then add ${cents(total)}¢ more.`] });
+  }
+  say(`That will be <b>${f(total)}</b>, please. Tap the notes and coins you want to pay with, then press PAY.`);
+  const paid = await pay(total);
+  if (paid === total) { sfxGood(); say('That is the exact amount, so there is no change. Thank you!'); }
+  else {
+    say(`You gave me <b>${f(paid)}</b>. How much change should I give you?`);
+    await ask({ eq: `${f(paid)} − ${f(total)} =`, unit: 'money', answer: paid - total, hints: subHints(paid, total) });
+    say(`That's right! Here is your change of <b>${f(paid - total)}</b>.`);
+    await giveChange(paid - total);
+    say(`Thank you! Enjoy your ${e.items.map(it => it.name).join(' and ')}.`);
+  }
+  e.done = true;
+  await next('LEAVE SHOP');
+  closeScene();
+  showMsg(errands.every(x => x.done) ? 'All done! Walk back HOME to show Mum.' : `You bought the ${e.items.map(it => it.name).join(' and ')}! What is next on the list?`);
+}
+
+async function runHomeStart() {
+  openScene(bld('home'), '👩');
+  $('scItems').innerHTML = errands.map(e => `<div class="item mini">${e.items.map(icoHTML).join('').replace(/<\/span><span class="ico">/g, ' ')}${errandLabel(e)}</div>`).join('');
+  renderSceneWallet({ hideTotal: true });
+  say('Mum: Please buy these things for me. Here is your wallet. First, count your money. How much do you have?');
+  await ask({ eq: 'I have', unit: 'money', answer: startMoney, hints: countHints() });
+  counted = true; renderSceneWallet();
+  say(`Mum: Yes, you have <b>${f(startMoney)}</b>. Walk to the shops with a <b>!</b> above them. Come home when you have bought everything.`);
+  await next('GO SHOPPING');
+  closeScene();
+  showMsg(document.body.classList.contains('touch') ? 'Use the arrow pad to walk. Step into a shop door to go in.' : 'Use the arrow keys to walk. Step into a shop door to go in.');
+}
+
+async function runHomeEnd() {
+  openScene(bld('home'), '👩');
+  const left = sum(wallet);
+  $('scItems').innerHTML = errands.map(e => e.items.map(it => `<div class="item mini">${icoHTML(it)}${cap(it.name)}</div>`).join('')).join('');
+  say(`Mum: You bought everything! You started with <b>${f(startMoney)}</b> and you have <b>${f(left)}</b> left. How much did you spend?`);
+  await ask({ eq: `${f(startMoney)} − ${f(left)} =`, unit: 'money', answer: startMoney - left, hints: subHints(startMoney, left) });
+  say('Mum: Thank you for your help. You are a super shopper!');
+  await next('FINISH');
+  $('scene').classList.remove('show');
+  const pct = stats.first / stats.q;
+  $('endStars').textContent = '⭐'.repeat(pct >= .9 ? 3 : pct >= .6 ? 2 : 1);
+  $('endStats').innerHTML = `You answered <b>${stats.first} of ${stats.q}</b> questions correctly on the first try.<br>Money spent: <b>${f(startMoney - left)}</b> · Money left: <b>${f(left)}</b>`;
+  mode = 'end'; $('end').classList.add('show');
+}
+
+// ---------- overworld ----------
+const TS = 32, COLS = 20, ROWS = 14;
+const GRASS = 0, PATH = 1, TREE = 2, WATER = 3, FLOWER = 4, WALL = 5, DOOR = 6;
+const map = [];
+for (let y = 0; y < ROWS; y++) { map.push([]); for (let x = 0; x < COLS; x++) map[y].push(x === 0 || y === 0 || x === COLS - 1 || y === ROWS - 1 ? TREE : GRASS); }
+for (let x = 1; x < COLS - 1; x++) { map[4][x] = PATH; map[11][x] = PATH; }
+for (let y = 4; y <= 11; y++) { map[y][6] = PATH; map[y][13] = PATH; }
+for (let y = 5; y <= 6; y++) for (let x = 8; x <= 11; x++) map[y][x] = WATER;
+[[2, 6], [4, 5], [15, 5], [17, 6], [1, 9], [18, 9]].forEach(([x, y]) => map[y][x] = TREE);
+[[3, 5], [5, 7], [16, 7], [14, 6], [8, 7], [11, 7], [2, 12], [5, 12], [10, 12], [15, 12], [18, 12], [1, 5], [18, 5], [7, 9], [12, 9]].forEach(([x, y]) => map[y][x] = FLOWER);
+for (const b of BLD) {
+  for (let y = 0; y < 3; y++) for (let x = 0; x < 4; x++) map[b.y + y][b.x + x] = WALL;
+  b.dx = b.x + 1; b.dy = b.y + 2; map[b.dy][b.dx] = DOOR;
+}
+const walkable = (x, y) => [GRASS, PATH, FLOWER, DOOR].includes(map[y][x]);
+
+const player = { tx: 9, ty: 11, nx: 9, ny: 11, t: 0, dir: 'down', moving: false, step: 0 };
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const held = [];
+const cv = $('cv'), ctx = cv.getContext('2d');
+
+let msgTimer;
+function showMsg(t) { $('mapmsg').textContent = t; $('mapmsg').classList.add('show'); clearTimeout(msgTimer); msgTimer = setTimeout(hideMsg, 4500); }
+function hideMsg() { $('mapmsg').classList.remove('show'); }
+
+function arrive() {
+  if (map[player.ty][player.tx] !== DOOR) return;
+  const b = BLD.find(b => b.dx === player.tx && b.dy === player.ty);
+  player.ty += 1; player.dir = 'down';      // she comes back out standing in front of the door
+  held.length = 0;
+  const allDone = errands.every(e => e.done);
+  if (b.id === 'home') return allDone ? runHomeEnd() : showMsg('Mum: Finish the shopping list first!');
+  const e = errands.find(x => x.shop === b.id);
+  if (!e) return showMsg('There is nothing on your list from this shop.');
+  if (e.done) return showMsg('You have already finished shopping here.');
+  runShop(b);
+}
+
+function update(dt) {
+  if (mode !== 'map') return;
+  if (player.moving) {
+    player.t += dt / 150;
+    if (player.t >= 1) { player.tx = player.nx; player.ty = player.ny; player.moving = false; player.step++; arrive(); }
+  }
+  if (!player.moving && mode === 'map' && held.length) {
+    player.dir = held[held.length - 1];
+    const [dx, dy] = DIRS[player.dir], nx = player.tx + dx, ny = player.ty + dy;
+    if (walkable(nx, ny)) { player.nx = nx; player.ny = ny; player.t = 0; player.moving = true; hideMsg(); }
+  }
+}
+
+function drawTile(x, y, time) {
+  const t = map[y][x], X = x * TS, Y = y * TS;
+  ctx.fillStyle = (x + y) % 2 ? '#7ec850' : '#76c148'; ctx.fillRect(X, Y, TS, TS);
+  if (t === PATH) {
+    ctx.fillStyle = '#ead9a7'; ctx.fillRect(X, Y, TS, TS);
+    ctx.fillStyle = '#d9c58a'; ctx.fillRect(X + 6, Y + 8, 4, 3); ctx.fillRect(X + 20, Y + 20, 5, 3);
+  } else if (t === TREE) {
+    ctx.fillStyle = '#7a4a21'; ctx.fillRect(X + 13, Y + 20, 6, 10);
+    ctx.fillStyle = '#2f8f3a'; ctx.beginPath(); ctx.arc(X + 16, Y + 13, 12, 0, 7); ctx.fill();
+    ctx.fillStyle = '#48ad4f'; ctx.beginPath(); ctx.arc(X + 13, Y + 10, 6, 0, 7); ctx.fill();
+  } else if (t === WATER) {
+    ctx.fillStyle = '#4aa3df'; ctx.fillRect(X, Y, TS, TS);
+    ctx.fillStyle = '#9fd4f5'; const o = Math.floor(time / 400 + x + y) % 2 * 6;
+    ctx.fillRect(X + 4 + o, Y + 8, 10, 2); ctx.fillRect(X + 14 - o + 6, Y + 22, 8, 2);
+  } else if (t === FLOWER) {
+    ctx.fillStyle = (x * 7 + y) % 2 ? '#ff6fae' : '#fff';
+    for (const [fx, fy] of [[9, 10], [22, 18], [12, 24]]) { ctx.fillRect(X + fx - 2, Y + fy, 6, 2); ctx.fillRect(X + fx, Y + fy - 2, 2, 6); }
+    ctx.fillStyle = '#ffd43b'; for (const [fx, fy] of [[9, 10], [22, 18], [12, 24]]) ctx.fillRect(X + fx, Y + fy, 2, 2);
+  }
+}
+
+function drawBld(b, time) {
+  const X = b.x * TS, Y = b.y * TS, W = 4 * TS, H = 3 * TS;
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(X + 2, Y + 4, W - 4, H - 4);
+  ctx.fillStyle = '#fdf2d0'; ctx.fillRect(X + 5, Y + 36, W - 10, H - 39);
+  ctx.fillStyle = b.roof; ctx.fillRect(X + 4, Y + 6, W - 8, 30);
+  ctx.fillStyle = 'rgba(255,255,255,.28)'; for (let i = 0; i < 6; i++) ctx.fillRect(X + 10 + i * 20, Y + 6, 8, 30);
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(X + 8, Y + 30, W - 16, 20);
+  ctx.fillStyle = '#fff'; ctx.fillRect(X + 10, Y + 32, W - 20, 16);
+  ctx.fillStyle = '#1b2a41'; ctx.font = '8px "Press Start 2P", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(b.name, X + W / 2, Y + 41);
+  // door
+  const dx = b.dx * TS, dy = b.dy * TS;
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(dx + 3, dy, 26, TS);
+  ctx.fillStyle = '#8d5a2b'; ctx.fillRect(dx + 5, dy + 2, 22, TS - 2);
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(dx + 21, dy + 16, 3, 3);
+  // window with the shop's icon
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(X + 72, Y + 58, 44, 28);
+  ctx.fillStyle = '#bfe9ff'; ctx.fillRect(X + 74, Y + 60, 40, 24);
+  ctx.font = '18px serif'; ctx.fillText(b.icon, X + 94, Y + 73);
+  // marker: ! for a shop still to visit, tick when finished
+  const e = errands.find(x => x.shop === b.id), allDone = errands.length && errands.every(x => x.done);
+  const mark = b.id === 'home' ? (allDone ? '!' : '') : e ? (e.done ? '✓' : '!') : '';
+  if (mark) {
+    const my = Y - 6 + (mark === '!' ? Math.sin(time / 180) * 3 : 0), mx = dx + 16;
+    ctx.fillStyle = '#1b2a41'; ctx.beginPath(); ctx.arc(mx, my, 11, 0, 7); ctx.fill();
+    ctx.fillStyle = mark === '!' ? '#ffd43b' : '#2ecc71'; ctx.beginPath(); ctx.arc(mx, my, 9, 0, 7); ctx.fill();
+    ctx.fillStyle = '#1b2a41'; ctx.font = 'bold 14px sans-serif'; ctx.fillText(mark, mx, my + 1);
+  }
+}
+
+function drawPlayer() {
+  const p = player, k = p.moving ? p.t : 0;
+  const X = Math.round((p.tx + (p.nx - p.tx) * k) * TS), Y = Math.round((p.ty + (p.ny - p.ty) * k) * TS);
+  const walk = p.moving ? (p.t < .5 ? 1 : -1) * (p.step % 2 ? 1 : -1) : 0, bob = p.moving && p.t > .25 && p.t < .75 ? -1 : 0;
+  ctx.fillStyle = 'rgba(0,0,0,.2)'; ctx.beginPath(); ctx.ellipse(X + 16, Y + 30, 9, 3, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#f2c79c'; ctx.fillRect(X + 11, Y + 25 + Math.max(0, walk) * -2, 4, 5); ctx.fillRect(X + 17, Y + 25 + Math.max(0, -walk) * -2, 4, 5);
+  ctx.fillStyle = '#c0392b'; ctx.fillRect(X + 11, Y + 28 + Math.max(0, walk) * -2, 4, 2); ctx.fillRect(X + 17, Y + 28 + Math.max(0, -walk) * -2, 4, 2);
+  const y = Y + bob;
+  ctx.fillStyle = '#ff5fa2'; ctx.fillRect(X + 10, y + 16, 12, 6); ctx.fillRect(X + 8, y + 20, 16, 6);       // dress
+  ctx.fillStyle = '#f2c79c'; ctx.fillRect(X + 7, y + 17, 3, 6); ctx.fillRect(X + 22, y + 17, 3, 6);          // arms
+  ctx.fillStyle = '#4a2c17'; ctx.fillRect(X + 5, y + 6, 4, 9); ctx.fillRect(X + 23, y + 6, 4, 9);            // pigtails
+  ctx.fillStyle = '#f2c79c'; ctx.fillRect(X + 9, y + 4, 14, 13);                                             // head
+  ctx.fillStyle = '#4a2c17';
+  if (p.dir === 'up') ctx.fillRect(X + 8, y + 2, 16, 13);
+  else {
+    ctx.fillRect(X + 8, y + 2, 16, 6);
+    ctx.fillStyle = '#1b2a41';
+    if (p.dir === 'down') { ctx.fillRect(X + 12, y + 10, 2, 3); ctx.fillRect(X + 18, y + 10, 2, 3); }
+    else ctx.fillRect(X + (p.dir === 'left' ? 11 : 19), y + 10, 2, 3);
+  }
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(X + 5, y + 6, 4, 2); ctx.fillRect(X + 23, y + 6, 4, 2);            // hair ties
+}
+
+let last = 0;
+function frame(time) {
+  update(Math.min(50, time - last)); last = time;
+  if (mode === 'map') {
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) drawTile(x, y, time);
+    for (const b of BLD) drawBld(b, time);
+    drawPlayer();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- input ----------
+const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+const press = d => { if (!held.includes(d)) held.push(d); };
+const release = d => { const i = held.indexOf(d); if (i >= 0) held.splice(i, 1); };
+addEventListener('keydown', e => {
+  if (pad) { if (/^\d$/.test(e.key) || ['.', 'Backspace', 'Enter'].includes(e.key)) { e.preventDefault(); pad(e.key); } return; }
+  const d = KEYDIR[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (mode === 'map' && d) { e.preventDefault(); press(d); return; }
+  if (e.key === 'Enter') {
+    const b = mode === 'title' ? $('startBtn') : mode === 'end' ? $('againBtn') : document.querySelector('#scene .primary');
+    if (b) { e.preventDefault(); b.click(); }
+  }
+});
+addEventListener('keyup', e => { const d = KEYDIR[e.key.length === 1 ? e.key.toLowerCase() : e.key]; if (d) release(d); });
+addEventListener('blur', () => { held.length = 0; });
+document.querySelectorAll('#dpad button').forEach(b => {
+  const d = b.dataset.d;
+  b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('down'); press(d); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) b.addEventListener(ev, () => { b.classList.remove('down'); release(d); });
+});
+if (matchMedia('(pointer: coarse)').matches) document.body.classList.add('touch');
+addEventListener('touchstart', () => document.body.classList.add('touch'), { once: true, passive: true });
+addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- title / end ----------
+$('levels').onclick = e => {
+  const b = e.target.closest('.opt'); if (!b) return;
+  level = b.dataset.lv;
+  document.querySelectorAll('#levels .opt').forEach(o => o.classList.toggle('sel', o === b));
+};
+$('startBtn').onclick = () => { $('title').classList.remove('show'); newGame(); runHomeStart(); };
+$('againBtn').onclick = () => { $('end').classList.remove('show'); mode = 'title'; $('title').classList.add('show'); };
+})();
+</script>
+</body>
+</html>
