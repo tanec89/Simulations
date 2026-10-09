@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>P2 Multiplication Shooter</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1e3f; font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; color: #fff; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #app { display: flex; flex-direction: column; height: 100%; max-width: 900px; margin: 0 auto; }
+
+  #hud { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 12px; background: #12306b; font-size: 18px; font-weight: 700; flex-wrap: wrap; }
+  #hud .pill { background: #1d4596; border-radius: 14px; padding: 2px 12px; white-space: nowrap; }
+  #timer { color: #ffe066; min-width: 70px; text-align: center; }
+  #timer.low { color: #ff6b6b; }
+  #lives { letter-spacing: 1px; font-size: 16px; }
+
+  #question { text-align: center; font-size: clamp(34px, 7vh, 56px); font-weight: 800; padding: 2px 0; background: #1a3c82; color: #fff; text-shadow: 0 2px 0 #0b1e3f; }
+
+  #stage { position: relative; flex: 1; min-height: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  #controls { display: flex; gap: 12px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: #12306b; }
+  .ctl { flex: 1; border: 0; border-radius: 18px; font: 800 30px 'Baloo 2', sans-serif; color: #fff; padding: 14px 0; touch-action: none; box-shadow: 0 5px 0 rgba(0,0,0,.35); }
+  .ctl:active, .ctl.down { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+  #btnL, #btnR { background: #3b82f6; }
+  #btnShoot { background: #ef4444; flex: 1.6; }
+
+  .overlay { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 20px; background: radial-gradient(circle at 50% 30%, #1d4ea8, #0b1e3f 75%); text-align: center; z-index: 10; overflow-y: auto; touch-action: auto; }
+  .overlay.show { display: flex; }
+  .overlay h1 { margin: 0; font-size: clamp(32px, 6vw, 52px); font-weight: 800; line-height: 1.05; }
+  .overlay h2 { margin: 0; font-size: clamp(22px, 4vw, 32px); font-weight: 700; color: #ffe066; }
+  .overlay p { margin: 0; font-size: 20px; }
+  input[type=text] { font: 700 28px 'Baloo 2', sans-serif; text-align: center; padding: 10px 16px; border-radius: 16px; border: 4px solid #ffe066; width: min(360px, 90%); outline: none; user-select: text; -webkit-user-select: text; }
+  .btn { font: 800 26px 'Baloo 2', sans-serif; padding: 10px 34px; border: 0; border-radius: 18px; background: #22c55e; color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.35); cursor: pointer; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+  .btn:disabled { opacity: .45; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 520px; }
+  .opt { font: 700 24px 'Baloo 2', sans-serif; padding: 6px 20px; min-width: 64px; border-radius: 14px; border: 3px solid #5b8def; background: #1d4596; color: #fff; cursor: pointer; }
+  .opt.sel { background: #ffe066; color: #0b1e3f; border-color: #fff; }
+  .opt.easy.sel { background: #4ade80; } .opt.mid.sel { background: #ffe066; } .opt.hard.sel { background: #fb7185; }
+  .stats { font-size: 22px; line-height: 1.5; background: rgba(255,255,255,.12); padding: 10px 26px; border-radius: 18px; }
+  #report { width: min(480px, 100%); text-align: left; display: flex; flex-direction: column; gap: 8px; }
+  .rep { font-size: 18px; line-height: 1.3; padding: 8px 14px; border-radius: 14px; background: rgba(255,255,255,.12); }
+  .rep.good { background: rgba(74,222,128,.25); } .rep.bad { background: rgba(251,113,133,.25); } .rep.tip { background: rgba(255,224,102,.25); }
+  .rep span { opacity: .8; }
+  #banner { position: absolute; left: 0; right: 0; top: 38%; text-align: center; font-size: 44px; font-weight: 800; pointer-events: none; opacity: 0; transition: opacity .25s; text-shadow: 0 3px 0 rgba(0,0,0,.4); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <span class="pill" id="hudName">Player</span>
+    <span class="pill" id="hudLevel">Level 1</span>
+    <span class="pill" id="hudScore">⭐ 0</span>
+    <span class="pill" id="timer">3:00</span>
+    <span class="pill" id="lives"></span>
+  </div>
+  <div id="question">&nbsp;</div>
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="banner"></div>
+
+    <!-- Screen 1: name -->
+    <div class="overlay show" id="scrName">
+      <h1>✈️ Times Table Shooter</h1>
+      <p>Shoot the correct answer before it lands!</p>
+      <input type="text" id="nameInput" maxlength="16" placeholder="Type your name" autocomplete="off">
+      <button class="btn" id="btnNameNext">Next ▶</button>
+    </div>
+
+    <!-- Screen 2: setup -->
+    <div class="overlay" id="scrSetup">
+      <h1 id="welcome">Welcome!</h1>
+      <h2>Choose difficulty</h2>
+      <div class="row" id="diffRow">
+        <button class="opt easy sel" data-d="easy">🐢 Easy</button>
+        <button class="opt mid" data-d="mid">🐇 Intermediate</button>
+        <button class="opt hard" data-d="hard">🚀 Challenging</button>
+      </div>
+      <h2>Choose times table</h2>
+      <div class="row" id="tableRow"></div>
+      <button class="btn" id="btnStart">Start Game ▶</button>
+    </div>
+
+    <!-- Level complete -->
+    <div class="overlay" id="scrLevel">
+      <h1 id="lvTitle">Level 1 complete!</h1>
+      <div class="stats" id="lvStats"></div>
+      <p>Next level: all tables mixed, and faster!</p>
+      <button class="btn" id="btnNext">Next Level ▶</button>
+    </div>
+
+    <!-- Game over -->
+    <div class="overlay" id="scrOver">
+      <h1>Game Over</h1>
+      <div class="stats" id="overStats"></div>
+      <div id="report"></div>
+      <button class="btn" id="btnAgain">Play Again 🔄</button>
+    </div>
+  </div>
+  <div id="controls">
+    <button class="ctl" id="btnL">◀</button>
+    <button class="ctl" id="btnShoot">🔫 SHOOT</button>
+    <button class="ctl" id="btnR">▶</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+
+  // ---------- config ----------
+  const MAX_LIVES = 10, LEVEL_SECONDS = 180, SPEED_UP = 1.10;
+  const BASE_SPEED = { easy: 0.075, mid: 0.115, hard: 0.165 };   // screen heights per second
+  const LANES = [0.125, 0.375, 0.625, 0.875];
+  const HIT_LINE = 0.90;     // y (fraction of height) where the plane sits
+
+  // ---------- state ----------
+  const S = {
+    name: '', diff: 'easy', table: 'random',     // table: 2..10 or 'random'
+    level: 1, speedMul: 1, randomMode: false,
+    lives: MAX_LIVES, score: 0, wrong: 0, missed: 0, levelScore: 0, stats: {},
+    timeLeft: LEVEL_SECONDS, running: false,
+    q: null, bubbles: [], bullet: null, particles: [],
+    planeX: 0.5, keys: { left: false, right: false }, lastQ: '',
+    waveDelay: 0, flash: 0
+  };
+  let W = 0, H = 0, dpr = 1;
+
+  // ---------- audio ----------
+  let actx = null;
+  function beep(f, d, type = 'sine', v = 0.12, slide = 0) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = f;
+      if (slide) o.frequency.linearRampToValueAtTime(f + slide, actx.currentTime + d);
+      g.gain.value = v; g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime + d);
+      o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d);
+    } catch (e) {}
+  }
+  const sfx = {
+    shoot: () => beep(700, 0.12, 'square', 0.05, -400),
+    good: () => { beep(660, 0.12, 'triangle', 0.15); setTimeout(() => beep(880, 0.18, 'triangle', 0.15), 100); },
+    bad: () => beep(160, 0.35, 'sawtooth', 0.12, -60),
+    land: () => beep(120, 0.4, 'sawtooth', 0.14, -50),
+    done: () => [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => beep(f, 0.2, 'triangle', 0.15), i * 130))
+  };
+
+  // ---------- resize ----------
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    const r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+  const bubbleR = () => Math.min(W / 9.2, H / 11);
+
+  // ---------- question generation ----------
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // Shuffled "bag" so every fact is asked once before any repeats (even spread across tables)
+  function refillBag() {
+    const pairs = [];
+    const tables = (S.randomMode || S.table === 'random') ? [2, 3, 4, 5, 6, 7, 8, 9, 10] : [S.table];
+    tables.forEach(a => { for (let b = 1; b <= 10; b++) pairs.push([a, b]); });
+    S.bag = shuffle(pairs);
+    if (S.bag.length > 1 && S.bag[S.bag.length - 1].join('x') === S.lastQ) S.bag.unshift(S.bag.pop());
+  }
+
+  function newQuestion() {
+    if (!S.bag || !S.bag.length) refillBag();
+    let [a, b] = S.bag.pop();
+    S.lastQ = a + 'x' + b;
+    const ans = a * b;
+    const cand = new Set();
+    [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, ans + 10, ans - 10, ans + 2, ans - 2, a + b, ans + 1, ans - 1]
+      .forEach(n => { if (n > 0 && n !== ans && n <= 110) cand.add(n); });
+    // prefer "close" mistakes from table facts first, then pad with random multiples
+    let pool = shuffle([...cand]).slice(0, 3);
+    while (pool.length < 3) { const n = rnd(2, 10) * rnd(1, 10); if (n !== ans && !pool.includes(n)) pool.push(n); }
+    const vals = shuffle([ans, ...pool]);
+    S.q = { a, b, ans, errs: 0, done: false };
+    $('question').textContent = `${a} × ${b} = ?`;
+    const speed = BASE_SPEED[S.diff] * S.speedMul;
+    S.bubbles = vals.map((v, i) => ({ v, x: LANES[i], y: -0.06, correct: v === ans, speed }));
+  }
+
+  // ---------- game flow ----------
+  function show(id) {
+    ['scrName', 'scrSetup', 'scrLevel', 'scrOver'].forEach(s => $(s).classList.remove('show'));
+    if (id) $(id).classList.add('show');
+  }
+
+  function renderHud() {
+    $('hudName').textContent = S.name;
+    $('hudLevel').textContent = 'Level ' + S.level;
+    $('hudScore').textContent = '⭐ ' + S.score;
+    $('lives').textContent = '❤️'.repeat(S.lives) + '🖤'.repeat(MAX_LIVES - S.lives);
+    const m = Math.floor(S.timeLeft / 60), s = Math.floor(S.timeLeft % 60);
+    $('timer').textContent = `${m}:${String(s).padStart(2, '0')}`;
+    $('timer').classList.toggle('low', S.timeLeft <= 20);
+  }
+
+  function startLevel() {
+    S.timeLeft = LEVEL_SECONDS; S.levelScore = 0; S.bullet = null; S.particles = [];
+    S.lastQ = ''; S.bag = null; show(null); newQuestion(); S.running = true; renderHud();
+    banner('Level ' + S.level);
+  }
+
+  function newGame() {
+    Object.assign(S, { level: 1, speedMul: 1, randomMode: false, lives: MAX_LIVES, score: 0, wrong: 0, missed: 0, stats: {} });
+    startLevel();
+  }
+
+  function levelComplete() {
+    S.running = false; sfx.done();
+    $('lvTitle').textContent = `Level ${S.level} complete! 🎉`;
+    $('lvStats').innerHTML = `Questions correct this level: <b>${S.levelScore}</b><br>Total score: <b>${S.score}</b><br>Lives left: <b>${S.lives}</b>`;
+    show('scrLevel');
+  }
+
+  function analysis() {
+    resolveQ();
+    const facts = Object.values(S.stats);
+    const byTable = {};
+    facts.forEach(f => { const t = byTable[f.a] || (byTable[f.a] = { t: f.a, asked: 0, errors: 0 }); t.asked += f.asked; t.errors += f.errors; });
+    const tables = Object.values(byTable).map(t => ({ ...t, rate: t.errors / t.asked }));
+    const weak = tables.filter(t => t.errors > 0).sort((a, b) => b.rate - a.rate || b.errors - a.errors).slice(0, 3);
+    const strong = tables.filter(t => t.asked >= 3 && t.errors === 0).sort((a, b) => b.asked - a.asked).slice(0, 4);
+    const tricky = facts.filter(f => f.errors > 0).sort((a, b) => b.errors - a.errors).slice(0, 5);
+    let h = '';
+    if (!facts.length) return '<p>Play a few more questions to see your report.</p>';
+    if (strong.length) h += `<div class="rep good"><b>💪 Strong:</b> ${strong.map(t => t.t + '×').join(', ')} table${strong.length > 1 ? 's' : ''}</div>`;
+    if (weak.length) {
+      h += `<div class="rep bad"><b>📚 Needs practice:</b><br>${weak.map(t => `${t.t}× table — ${t.errors} mistake${t.errors > 1 ? 's' : ''} in ${t.asked} question${t.asked > 1 ? 's' : ''}`).join('<br>')}</div>`;
+      h += `<div class="rep bad"><b>🎯 Tricky facts:</b><br>${tricky.map(f => `${f.a} × ${f.b} = ${f.a * f.b} <span>(${f.errors}×)</span>`).join('<br>')}</div>`;
+      h += `<div class="rep tip">💡 Tip: Practise the ${weak.map(t => t.t + '×').join(', ')} table${weak.length > 1 ? 's' : ''} by choosing ${weak.length > 1 ? 'them one at a time' : 'it'} next round. Try skip-counting out loud!</div>`;
+    } else {
+      h += `<div class="rep good">🌟 No mistakes! Try a harder level or all tables mixed.</div>`;
+    }
+    return h;
+  }
+
+  function gameOver() {
+    S.running = false; sfx.bad();
+    $('report').innerHTML = analysis();
+    $('overStats').innerHTML = `${S.name}, you reached <b>Level ${S.level}</b><br>Correct answers: <b>${S.score}</b><br>Wrong shots: <b>${S.wrong}</b> · Missed answers: <b>${S.missed}</b>`;
+    show('scrOver');
+  }
+
+  // record how the student did on the current question (once per question)
+  function resolveQ() {
+    const q = S.q; if (!q || q.done) return;
+    q.done = true;
+    const k = q.a + 'x' + q.b;
+    const st = S.stats[k] || (S.stats[k] = { a: q.a, b: q.b, asked: 0, errors: 0 });
+    st.asked++; st.errors += q.errs;
+  }
+
+  function loseLife() {
+    S.lives--; S.flash = 1; renderHud();
+    if (S.lives <= 0) gameOver();
+  }
+
+  let bannerT;
+  function banner(t) {
+    const b = $('banner'); b.textContent = t; b.style.opacity = 1;
+    clearTimeout(bannerT); bannerT = setTimeout(() => b.style.opacity = 0, 1100);
+  }
+
+  // ---------- shooting ----------
+  function shoot() {
+    if (!S.running || S.bullet) return;
+    S.bullet = { x: S.planeX, y: HIT_LINE - 0.05 };
+    sfx.shoot();
+  }
+
+  function burst(x, y, color) {
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 160;
+      S.particles.push({ x: x * W, y: y * H, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0.6, color });
+    }
+  }
+
+  // ---------- update ----------
+  function update(dt) {
+    if (S.flash > 0) S.flash = Math.max(0, S.flash - dt * 2.5);
+    S.particles.forEach(p => { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 300 * dt; p.life -= dt; });
+    S.particles = S.particles.filter(p => p.life > 0);
+    if (!S.running) return;
+
+    // plane movement
+    const mv = (S.keys.right ? 1 : 0) - (S.keys.left ? 1 : 0);
+    S.planeX = Math.min(0.96, Math.max(0.04, S.planeX + mv * 0.9 * dt));
+
+    // timer
+    S.timeLeft -= dt;
+    if (S.timeLeft <= 0) { S.timeLeft = 0; renderHud(); levelComplete(); return; }
+    renderHud();
+
+    // waiting for next wave
+    if (S.waveDelay > 0) {
+      S.waveDelay -= dt;
+      if (S.waveDelay <= 0) newQuestion();
+    }
+
+    // bubbles fall
+    const r = bubbleR();
+    for (const b of S.bubbles) {
+      b.y += b.speed * dt;
+      if (b.y * H + r >= HIT_LINE * H + r * 0.2 && !b.gone) {
+        b.gone = true;
+        burst(b.x, HIT_LINE, b.correct ? '#ff6b6b' : '#94a3b8');
+        if (b.correct) {            // correct answer landed -> lose a life
+          S.missed++; S.q.errs++; resolveQ(); sfx.land(); loseLife();
+          if (!S.running) return;
+          S.bubbles = []; $('question').textContent = ' '; S.waveDelay = 0.8;
+          break;
+        }
+      }
+    }
+    S.bubbles = S.bubbles.filter(b => !b.gone);
+
+    // bullet
+    if (S.bullet) {
+      const bl = S.bullet;
+      bl.y -= 1.5 * dt;
+      if (bl.y < -0.03) S.bullet = null;
+      else {
+        for (const b of S.bubbles) {
+          const dx = (b.x - bl.x) * W, dy = (b.y - bl.y) * H;
+          if (Math.hypot(dx, dy) < r + 6) {
+            S.bullet = null; b.gone = true;
+            if (b.correct) {
+              S.score++; S.levelScore++; resolveQ(); sfx.good(); burst(b.x, b.y, '#4ade80');
+              S.bubbles = []; S.waveDelay = 0.45; $('question').textContent = ' ';
+              renderHud();
+            } else {
+              S.wrong++; S.q.errs++; sfx.bad(); burst(b.x, b.y, '#fb7185'); banner('Oops! Wrong answer');
+              loseLife();
+            }
+            break;
+          }
+        }
+        S.bubbles = S.bubbles.filter(b => !b.gone);
+      }
+    }
+  }
+
+  // ---------- draw ----------
+  const stars = Array.from({ length: 50 }, () => ({ x: Math.random(), y: Math.random(), s: Math.random() * 2 + 0.5 }));
+  function draw() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0b1e3f'); g.addColorStop(1, '#1d4ea8');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    stars.forEach(s => ctx.fillRect(s.x * W, s.y * H, s.s, s.s));
+
+    // danger line
+    ctx.strokeStyle = 'rgba(255,107,107,.35)'; ctx.setLineDash([10, 8]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, HIT_LINE * H - bubbleR() * 0.2); ctx.lineTo(W, HIT_LINE * H - bubbleR() * 0.2); ctx.stroke(); ctx.setLineDash([]);
+
+    const r = bubbleR();
+    // bubbles
+    for (const b of S.bubbles) {
+      const x = b.x * W, y = b.y * H;
+      const gr = ctx.createRadialGradient(x - r * .3, y - r * .3, r * .1, x, y, r);
+      gr.addColorStop(0, '#fff7c2'); gr.addColorStop(1, '#f5a524');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill();
+      ctx.lineWidth = 4; ctx.strokeStyle = '#fff'; ctx.stroke();
+      ctx.fillStyle = '#0b1e3f'; ctx.font = `800 ${r * 0.95}px 'Baloo 2', sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(b.v, x, y + r * 0.06);
+    }
+
+    // bullet
+    if (S.bullet) {
+      ctx.fillStyle = '#ff5252'; ctx.shadowColor = '#ff8a80'; ctx.shadowBlur = 12;
+      ctx.beginPath(); ctx.roundRect(S.bullet.x * W - 4, S.bullet.y * H - 14, 8, 28, 4); ctx.fill(); ctx.shadowBlur = 0;
+    }
+
+    // plane
+    const px = S.planeX * W, py = HIT_LINE * H + r * 0.25, s = Math.min(r * 1.0, 46);
+    ctx.save(); ctx.translate(px, py);
+    ctx.fillStyle = '#e2e8f0'; ctx.beginPath();                       // wings
+    ctx.moveTo(0, -s * 0.9); ctx.lineTo(s * 1.3, s * 0.6); ctx.lineTo(s * 0.35, s * 0.45); ctx.lineTo(s * 0.25, s * 0.9);
+    ctx.lineTo(-s * 0.25, s * 0.9); ctx.lineTo(-s * 0.35, s * 0.45); ctx.lineTo(-s * 1.3, s * 0.6); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(0, -s * 0.9); ctx.lineTo(s * 0.22, s * 0.3); ctx.lineTo(-s * 0.22, s * 0.3); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.ellipse(0, -s * 0.2, s * 0.14, s * 0.28, 0, 0, 7); ctx.fill();
+    ctx.restore();
+
+    // particles
+    S.particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life / 0.6); ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 6, 6); });
+    ctx.globalAlpha = 1;
+
+    // life-lost flash
+    if (S.flash > 0) { ctx.fillStyle = `rgba(255,60,60,${S.flash * 0.35})`; ctx.fillRect(0, 0, W, H); }
+  }
+
+  let last = 0;
+  function loop(t) {
+    const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
+    update(dt); draw(); requestAnimationFrame(loop);
+  }
+
+  // ---------- input ----------
+  function hold(btn, dir) {
+    const on = e => { e.preventDefault(); S.keys[dir] = true; btn.classList.add('down'); };
+    const off = e => { e.preventDefault(); S.keys[dir] = false; btn.classList.remove('down'); };
+    btn.addEventListener('pointerdown', on);
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => btn.addEventListener(ev, off));
+  }
+  hold($('btnL'), 'left'); hold($('btnR'), 'right');
+  $('btnShoot').addEventListener('pointerdown', e => { e.preventDefault(); shoot(); });
+
+  // drag/slide on the play area to move the plane
+  let dragging = false;
+  const dragTo = e => { const r = cv.getBoundingClientRect(); S.planeX = Math.min(0.96, Math.max(0.04, (e.clientX - r.left) / r.width)); };
+  cv.addEventListener('pointerdown', e => { dragging = true; cv.setPointerCapture(e.pointerId); dragTo(e); });
+  cv.addEventListener('pointermove', e => { if (dragging) dragTo(e); });
+  ['pointerup', 'pointercancel'].forEach(ev => cv.addEventListener(ev, () => dragging = false));
+
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') { if (e.key === 'Enter') $('btnNameNext').click(); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'a') S.keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd') S.keys.right = true;
+    if (e.key === ' ' || e.key === 'ArrowUp') { e.preventDefault(); shoot(); }
+  });
+  window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'a') S.keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd') S.keys.right = false;
+  });
+  document.addEventListener('touchmove', e => { if (!e.target.closest('.overlay')) e.preventDefault(); }, { passive: false });
+
+  // ---------- menus ----------
+  $('btnNameNext').onclick = () => {
+    const n = $('nameInput').value.trim();
+    if (!n) { $('nameInput').focus(); $('nameInput').style.borderColor = '#ff6b6b'; return; }
+    S.name = n; $('welcome').textContent = 'Welcome ' + n + '!';
+    show('scrSetup'); renderHud();
+  };
+
+  const tr = $('tableRow');
+  for (let t = 2; t <= 10; t++) tr.insertAdjacentHTML('beforeend', `<button class="opt" data-t="${t}">${t}×</button>`);
+  tr.insertAdjacentHTML('beforeend', `<button class="opt sel" data-t="random">🎲 Random</button>`);
+
+  $('diffRow').onclick = e => {
+    const b = e.target.closest('.opt'); if (!b) return;
+    document.querySelectorAll('#diffRow .opt').forEach(o => o.classList.remove('sel'));
+    b.classList.add('sel'); S.diff = b.dataset.d;
+  };
+  tr.onclick = e => {
+    const b = e.target.closest('.opt'); if (!b) return;
+    tr.querySelectorAll('.opt').forEach(o => o.classList.remove('sel'));
+    b.classList.add('sel'); S.table = b.dataset.t === 'random' ? 'random' : +b.dataset.t;
+  };
+
+  $('btnStart').onclick = () => { resize(); newGame(); };
+  $('btnNext').onclick = () => { S.level++; S.randomMode = true; S.speedMul *= SPEED_UP; startLevel(); };
+  $('btnAgain').onclick = () => { show('scrSetup'); };
+
+  // ---------- go ----------
+  resize(); renderHud();
+  requestAnimationFrame(loop);
+  setTimeout(resize, 200);
+})();
+</script>
+</body>
+</html>
