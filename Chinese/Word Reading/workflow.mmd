@@ -1,0 +1,50 @@
+flowchart TB
+  subgraph DEVICE["iPad or laptop browser - what users see"]
+    direction TB
+    U1["Child logs in<br/>username + password<br/>stays logged in on that device"]
+    U2["Home screen<br/>own stats, own word list"]
+    U3["Reading session<br/>word, timer, right / wrong"]
+    U4["Summary<br/>words to revise"]
+    P1["Parent uploads Excel<br/>word list"]
+    LS[("Copy saved on this device<br/>works if connection drops")]
+    U1 --> U2 --> U3 --> U4
+    P1 --> U2
+    U3 --> LS
+  end
+
+  subgraph GH["GitHub Pages - public"]
+    G1["App files<br/>HTML + firebase-config.js<br/>anyone can read the code"]
+  end
+
+  subgraph SPEECH["Speech service - Apple or Google"]
+    S1["Turns the child's voice into text<br/>audio is sent here, not stored by the app"]
+  end
+
+  subgraph FB["Firebase Firestore - cloud database"]
+    F0["Firebase sign-in<br/>checks username + password<br/>stores passwords scrambled"]
+    F1[("One record per login<br/>name, word list,<br/>progress per word")]
+    F2{{"Security rules<br/>each login reaches only<br/>its own record"}}
+    F0 --> F2 --> F1
+  end
+
+  subgraph ADMIN["Administrator - you"]
+    A1["Firebase console<br/>Google account login<br/>sees and edits ALL records,<br/>lists and deletes accounts,<br/>cannot see passwords"]
+    A2["GitHub account<br/>changes the app code"]
+  end
+
+  G1 -- "1. loads the app over HTTPS" --> U1
+  U1 -- "2. username + password" --> F0
+  U3 -- "3. voice" --> S1
+  S1 -- "4. text heard" --> U3
+  U3 -- "5. save progress after each word" --> F2
+  P1 -- "save word list" --> F2
+  A1 --> F1
+  A2 --> G1
+
+  subgraph SEC["Protection"]
+    direction TB
+    OK["In place: HTTPS in transit,<br/>encrypted storage at Google,<br/>password checked by Firebase, not the browser,<br/>each login can open only its own record,<br/>console needs your Google login,<br/>no voice recordings kept"]
+    LIM["Limits: anyone can create a new, empty profile.<br/>A weak password can be guessed.<br/>No email, so a forgotten password<br/>needs the administrator"]
+  end
+
+  F2 -.-> OK

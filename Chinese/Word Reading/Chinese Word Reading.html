@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F2F7">
+<title>Chinese Word Reading</title>
+<style>
+  /* Apple UI Design System – Verified: 8pt Grid, SF Pro Typography, Material-Depth, Natural Spring Motion */
+  :root{
+    --bg:#F2F2F7;
+    --material:rgba(255,255,255,0.72); --material-border:rgba(0,0,0,0.1);
+    --fill:rgba(0,0,0,0.05);
+    --ink:#1C1C1E; --ink2:#5C5C61;
+    --accent:#007AFF; --link:#0066CC;
+    --green:#34C759; --red:#FF3B30; --orange:#FF9500;
+    --green-text:#1A7030; --red-text:#C4281C; --orange-text:#9A5200;
+    --good-tint:rgba(52,199,89,0.2); --bad-tint:rgba(255,59,48,0.16);
+    --focus:0 0 0 3px rgba(0,122,255,0.5);
+    --shadow:0 4px 12px rgba(0,0,0,0.1);
+    --card-shadow:0 8px 32px rgba(0,0,0,0.08);
+    --ease:300ms cubic-bezier(0.25,0.1,0.25,1);
+    --spring:cubic-bezier(0.4,0,0.2,1.4);
+    --font:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",sans-serif;
+    --kai:"Kaiti SC","STKaiti","KaiTi","PingFang SC","Microsoft YaHei",sans-serif;
+    --blob1:rgba(0,122,255,0.22); --blob2:rgba(175,82,222,0.16); --blob3:rgba(52,199,89,0.16);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#000000;
+      --material:rgba(28,28,30,0.7); --material-border:rgba(255,255,255,0.15);
+      --fill:rgba(255,255,255,0.1);
+      --ink:#FFFFFF; --ink2:#AEAEB2;
+      --accent:#0A84FF; --link:#4DA3FF;
+      --green:#30D158; --red:#FF453A; --orange:#FF9F0A;
+      --green-text:#30D158; --red-text:#FF6961; --orange-text:#FF9F0A;
+      --good-tint:rgba(48,209,88,0.24); --bad-tint:rgba(255,69,58,0.24);
+      --focus:0 0 0 3px rgba(10,132,255,0.5);
+      --shadow:0 4px 12px rgba(0,0,0,0.4); --card-shadow:0 8px 32px rgba(0,0,0,0.4);
+      --blob1:rgba(10,132,255,0.3); --blob2:rgba(191,90,242,0.22); --blob3:rgba(48,209,88,0.16);
+    }
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; min-height:100vh; min-height:100dvh; color:var(--ink);
+    font-family:var(--font); font-weight:400; letter-spacing:-0.011em; line-height:1.5;
+    background:
+      radial-gradient(640px 480px at 8% 0%, var(--blob1), transparent 70%),
+      radial-gradient(560px 480px at 96% 16%, var(--blob2), transparent 70%),
+      radial-gradient(640px 560px at 48% 104%, var(--blob3), transparent 70%),
+      var(--bg);
+    background-attachment:fixed;
+    display:flex; flex-direction:column; align-items:center;
+    -webkit-user-select:none; user-select:none; -webkit-font-smoothing:antialiased;
+  }
+  .hidden{ display:none !important; }
+
+  /* material */
+  .panel,.nav,.chip{
+    background:var(--material);
+    -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%);
+    border:0.5px solid var(--material-border);
+  }
+
+  /* navigation bar */
+  .nav{
+    position:sticky; top:0; z-index:1000; width:100%;
+    border-width:0 0 0.5px 0; border-bottom:0.5px solid var(--material-border);
+    padding:env(safe-area-inset-top) max(24px,env(safe-area-inset-right)) 0 max(24px,env(safe-area-inset-left));
+  }
+  .nav-in{ max-width:768px; margin:0 auto; min-height:48px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  a.back{ color:var(--link); font-size:17px; text-decoration:none; min-height:44px; display:inline-flex; align-items:center; border-radius:8px; transition:opacity var(--ease); }
+  a.back:active{ opacity:0.6; }
+  a.back:focus-visible{ outline:none; box-shadow:var(--focus); }
+
+  .app{ width:100%; max-width:816px; padding:24px max(24px,env(safe-area-inset-right)) max(32px,env(safe-area-inset-bottom)) max(24px,env(safe-area-inset-left)); }
+
+  /* typography */
+  h1,h2,.stat b,.prompt,.ring b,.word,.pinyin,.revise .w b,.big-emoji{ letter-spacing:-0.022em; line-height:1.2; font-weight:600; }
+  h1,h2{ margin:0; }
+  h1{ font-size:40px; }
+  h2{ font-size:24px; }
+  h2.sub{ font-size:21px; margin-top:24px; }
+  .subtitle{ color:var(--ink2); font-size:17px; margin:0 0 24px; }
+  .note{ color:var(--ink2); font-size:15px; margin:8px 0 16px; }
+  body.in-session h1, body.in-session .subtitle{ display:none; }
+
+  /* cards */
+  .panel{ border-radius:20px; box-shadow:var(--card-shadow); padding:24px; margin-bottom:16px;
+    animation:rise 400ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  .panel:nth-child(2){ animation-delay:50ms; }
+  .panel:nth-child(3){ animation-delay:100ms; }
+  @keyframes rise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+
+  /* inputs */
+  label{ font-weight:600; font-size:15px; color:var(--ink2); display:block; margin:16px 0 8px; }
+  label.check{ display:flex; align-items:center; gap:8px; min-height:44px; margin:8px 0 0; font-weight:400; }
+  input[type=text],input[type=password]{
+    width:100%; height:48px; font:inherit; font-size:19px; padding:0 16px; color:var(--ink);
+    border:none; background:var(--fill); border-radius:12px; outline:none;
+    -webkit-user-select:text; user-select:text; transition:box-shadow var(--ease);
+  }
+  input::placeholder{ color:var(--ink2); opacity:1; }
+  input[type=text]:focus,input[type=password]:focus{ box-shadow:var(--focus); }
+  input[type=checkbox]{ width:24px; height:24px; margin:0; accent-color:var(--accent); flex:none; }
+
+  /* buttons */
+  button{
+    font:inherit; font-size:19px; font-weight:700; letter-spacing:-0.011em; cursor:pointer;
+    height:44px; padding:0 24px; border:none; border-radius:12px; outline:none;
+    background:var(--accent); color:#FFFFFF; box-shadow:var(--shadow);
+    transition:transform var(--ease), box-shadow var(--ease), opacity var(--ease), background var(--ease);
+    touch-action:manipulation; white-space:nowrap;
+  }
+  @media (hover:hover){
+    button:hover{ transform:scale(1.02); box-shadow:0 8px 16px rgba(0,0,0,0.16); }
+    .stat:hover,.revise .w:hover{ transform:scale(1.02); box-shadow:var(--shadow); }
+  }
+  button:active{ transform:scale(0.96); }
+  button:focus-visible{ box-shadow:var(--focus); }
+  button:disabled{ opacity:0.4; pointer-events:none; }
+  button.big{ height:56px; width:100%; }
+  button.grey{ background:var(--fill); color:var(--link); box-shadow:none; font-size:17px; font-weight:600; }
+  button.small{ padding:0 16px; font-size:15px; font-weight:600; }
+  button.good{ background:var(--fill); color:var(--green-text); box-shadow:none; }
+  button.bad{ background:var(--fill); color:var(--red-text); box-shadow:none; }
+  .row{ display:flex; gap:8px; flex-wrap:wrap; }
+  .row > *{ flex:1 1 auto; }
+  .msg{ margin-top:16px; font-weight:600; font-size:15px; min-height:24px; color:var(--ink2); }
+  .msg:empty{ margin-top:0; min-height:0; }
+  .msg.err{ color:var(--red-text); } .msg.ok{ color:var(--green-text); }
+  .gap{ height:24px; }
+
+  /* small elements */
+  .chip{ display:inline-flex; align-items:center; height:32px; padding:0 16px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink2); white-space:nowrap; }
+  .tag{ display:inline-flex; align-items:center; height:24px; padding:0 8px; border-radius:8px; font-size:13px; font-weight:600; background:var(--fill); color:var(--ink2); white-space:nowrap; align-self:center; }
+  .tag.learning{ color:var(--orange-text); } .tag.mastered{ color:var(--green-text); }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:16px; }
+
+  /* login */
+  .login{ max-width:464px; margin:0 auto; padding:32px 24px; }
+  .hero-icon{ width:80px; height:80px; border-radius:20px; margin:0 auto 16px; display:flex; align-items:center; justify-content:center;
+    font-family:var(--kai); font-size:44px; font-weight:600; color:#FFFFFF; line-height:1.2;
+    background:linear-gradient(145deg,#5AC8FA,#007AFF); box-shadow:0 8px 24px rgba(0,122,255,0.35); }
+
+  /* home */
+  .greeting{ display:flex; justify-content:space-between; align-items:center; gap:16px; }
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:16px 0; }
+  .stat{ background:var(--fill); border-radius:12px; padding:16px 8px; text-align:center;
+    transition:transform var(--ease), box-shadow var(--ease); animation:rise 400ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  .stat:nth-child(1){ animation-delay:50ms; } .stat:nth-child(2){ animation-delay:100ms; }
+  .stat:nth-child(3){ animation-delay:150ms; } .stat:nth-child(4){ animation-delay:200ms; }
+  .stat b{ display:block; font-size:32px; font-variant-numeric:tabular-nums; }
+  .stat span{ font-size:13px; color:var(--ink2); }
+  .stat.m b{ color:var(--green-text); } .stat.l b{ color:var(--orange-text); }
+  .bar{ height:8px; border-radius:8px; background:var(--fill); overflow:hidden; }
+  .bar > div{ height:100%; background:var(--green); border-radius:8px; width:0; transition:width 600ms cubic-bezier(0.25,0.1,0.25,1); }
+  details summary{ cursor:pointer; font-weight:600; color:var(--link); min-height:44px; display:flex; align-items:center; list-style:none; margin-top:8px; }
+  details summary::-webkit-details-marker{ display:none; }
+  .wordlist{ max-height:280px; overflow:auto; background:var(--fill); border-radius:12px; }
+  .wordlist div{ display:flex; justify-content:space-between; gap:16px; padding:8px 16px; min-height:48px; align-items:center; font-size:17px; border-bottom:0.5px solid var(--material-border); }
+  .wordlist div:last-child{ border-bottom:none; }
+
+  /* session */
+  .stage{ text-align:center; padding:16px 24px; min-height:calc(100dvh - 184px);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition:background var(--ease); }
+  .stage.good{ background:linear-gradient(var(--good-tint),var(--good-tint)), var(--material); }
+  .stage.bad{ background:linear-gradient(var(--bad-tint),var(--bad-tint)), var(--material); }
+  .word{ font-family:var(--kai); font-size:clamp(96px,min(24vw,18dvh),192px); word-break:keep-all; }
+  .stage.good .word{ animation:pop 400ms var(--spring); }
+  .stage.bad .word{ animation:shake 300ms cubic-bezier(0.25,0.1,0.25,1); }
+  @keyframes pop{ from{ transform:scale(0.9); } to{ transform:scale(1); } }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 25%{ transform:translateX(-8px); } 75%{ transform:translateX(8px); } }
+  .pinyin{ font-size:28px; color:var(--link); min-height:32px; }
+  .meaning{ font-size:19px; color:var(--ink2); min-height:32px; }
+  .prompt{ font-size:24px; margin:8px 0 0; min-height:32px; }
+  .heard{ color:var(--ink2); min-height:24px; font-size:15px; }
+
+  .ring{ position:relative; width:96px; height:96px; margin:8px auto; }
+  .ring svg{ width:100%; height:100%; transform:rotate(-90deg); }
+  .ring circle{ fill:none; stroke-width:8; }
+  .ring .track{ stroke:var(--fill); }
+  .ring #timerFill{ stroke:var(--accent); stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:0; transition:stroke var(--ease); }
+  .ring.low #timerFill{ stroke:var(--red); }
+  .ring b{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:32px; font-variant-numeric:tabular-nums; }
+
+  .mic{ width:80px; height:80px; border-radius:50%; padding:0; margin:8px auto; background:var(--fill); color:var(--link); box-shadow:none;
+    display:flex; align-items:center; justify-content:center; }
+  .mic svg{ width:40px; height:40px; fill:currentColor; }
+  .mic.live{ background:var(--red); color:#FFFFFF; animation:pulse 1600ms cubic-bezier(0.25,0.1,0.25,1) infinite; }
+  @keyframes pulse{ from{ box-shadow:0 0 0 0 rgba(255,59,48,0.45); } to{ box-shadow:0 0 0 24px rgba(255,59,48,0); } }
+  .parent{ display:flex; gap:8px; justify-content:center; align-items:center; margin-top:8px; color:var(--ink2); font-size:13px; }
+
+  /* summary */
+  .sum{ text-align:center; padding:32px 24px; }
+  .big-emoji{ font-size:72px; animation:pop 400ms var(--spring); }
+  .revise{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:16px 0 24px; }
+  .revise .w{ background:var(--fill); border-radius:12px; padding:16px 24px; min-width:96px; transition:transform var(--ease), box-shadow var(--ease); }
+  .revise .w b{ font-size:40px; display:block; font-family:var(--kai); }
+  .revise .w span{ font-size:15px; color:var(--link); font-weight:600; }
+
+  @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-in">
+    <a class="back" href="../../index.html">‹ All simulations</a>
+    <span class="chip" id="syncChip">Local only</span>
+  </div>
+</nav>
+<div class="app">
+  <h1>Word Reading</h1>
+  <p class="subtitle">Read the word aloud · 读一读</p>
+
+  <!-- LOGIN -->
+  <div id="screen-login" class="panel login">
+    <div class="hero-icon">字</div>
+    <label for="nameIn">Username</label>
+    <input id="nameIn" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="e.g. emma">
+    <label for="passIn">Password</label>
+    <input id="passIn" type="password" autocomplete="current-password" placeholder="At least 6 characters">
+    <div class="gap"></div>
+    <button class="big" id="loginBtn">Log in</button>
+    <div style="height:8px"></div>
+    <button class="big grey" id="createBtn">Create new profile</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <!-- HOME -->
+  <div id="screen-home" class="hidden">
+    <div class="panel">
+      <div class="greeting">
+        <h2 id="hello">Hi!</h2>
+        <button class="small grey" id="logoutBtn">Log out</button>
+      </div>
+      <div class="stats">
+        <div class="stat"><b id="stTotal">0</b><span>Words</span></div>
+        <div class="stat"><b id="stNew">0</b><span>New</span></div>
+        <div class="stat l"><b id="stLearn">0</b><span>Learning</span></div>
+        <div class="stat m"><b id="stMaster">0</b><span>Mastered</span></div>
+      </div>
+      <div class="bar"><div id="masterBar"></div></div>
+      <div class="gap"></div>
+      <button class="big" id="startBtn">Start reading</button>
+      <div class="msg" id="homeMsg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Word list</h2>
+      <p class="note">Upload an Excel file (.xlsx / .csv). Column A = word, B = pinyin (optional), C = meaning (optional).</p>
+      <div class="row">
+        <button class="grey" id="uploadBtn">Upload Excel</button>
+        <button class="grey" id="tplBtn">Download template</button>
+        <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
+      <label class="check"><input type="checkbox" id="replaceChk"> Replace the existing list (otherwise new words are added)</label>
+      <div class="msg" id="uploadMsg"></div>
+      <details>
+        <summary>Show words &amp; status</summary>
+        <div class="wordlist" id="wordList"></div>
+      </details>
+    </div>
+
+    <div class="panel">
+      <h2>Tools</h2>
+      <div class="row" style="margin-top:16px">
+        <button class="grey" id="micTestBtn">Test microphone</button>
+        <button class="grey" id="resetBtn">Reset progress</button>
+      </div>
+      <div class="msg" id="micMsg"></div>
+    </div>
+  </div>
+
+  <!-- SESSION -->
+  <div id="screen-session" class="hidden">
+    <div class="topbar">
+      <span class="chip" id="progChip">1 / 10</span>
+      <button class="small grey" id="quitBtn">✕ Stop</button>
+    </div>
+    <div class="panel stage" id="stage">
+      <div class="word" id="wordEl"></div>
+      <div class="pinyin" id="pinyinEl"></div>
+      <div class="meaning" id="meaningEl"></div>
+      <div class="ring" id="timerBar"><svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44" pathLength="100"/><circle id="timerFill" cx="50" cy="50" r="44" pathLength="100"/></svg><b id="timerNum">20</b></div>
+      <div class="prompt" id="promptEl"></div>
+      <div class="heard" id="heardEl"></div>
+      <button class="mic" id="micBtn" title="Tap to speak"><svg viewBox="0 0 24 24"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a1 1 0 1 1 2 0 8 8 0 0 1-7 7.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A8 8 0 0 1 4 11a1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg></button>
+      <div class="parent">
+        <span>Parent:</span>
+        <button class="small good" id="okBtn">✓ Correct</button>
+        <button class="small bad" id="noBtn">✗ Wrong</button>
+        <button class="small grey hidden" id="nextBtn">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div id="screen-summary" class="panel sum hidden">
+    <div class="big-emoji" id="sumEmoji">🌟</div>
+    <h2 id="sumTitle">Well done!</h2>
+    <p class="note" id="sumLine"></p>
+    <div id="reviseBlock">
+      <h2 class="sub">Words to revise again</h2>
+      <div class="revise" id="reviseList"></div>
+    </div>
+    <button class="big" id="homeBtn">Back home</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ---------- constants ---------- */
+const TIME_LIMIT = 20;      // seconds to read a word
+const MASTERY = 3;          // correct first-try reads in a row to master a word
+const HARD_MISSES = 3;      // a word missed this many times is "hard": needs one extra correct read, and comes back twice as often
+const SESSION_MAX = 20;     // words per session (first attempts)
+const NEW_MIN = 5;          // room kept for new words even when many are due for review
+const RETRY_GAP = 3;        // a missed word comes back after this many other words in the same session
+const RETRY_MAX = 2;        // ...at most this many times per session
+// days until a word is tested again, by how many times in a row it has been read correctly
+const INTERVAL_DAYS = [0, 0, 1, 3, 7, 14, 30];
+const DAY = 864e5;
+const COL = 'flashcardProfiles';
+
+const $ = id => document.getElementById(id);
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+/* ---------- storage (local always, Firestore when configured) ---------- */
+let db = null, auth = null;
+try{
+  if(window.FIREBASE_CONFIG && window.firebase){
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    db = firebase.firestore();
+    auth = firebase.auth();
+  }
+}catch(e){ console.warn('Firebase init failed', e); db = auth = null; }
+
+const docId = name => encodeURIComponent(name.trim().toLowerCase());
+// Firebase sign-in wants an email address, so each username is turned into a made-up one.
+// example.com is a reserved domain: no email is ever sent or received.
+const USER_DOMAIN = 'cwr.example.com';
+const userKey = name => Array.from(new TextEncoder().encode(name.trim().toLowerCase())).map(b=>b.toString(16).padStart(2,'0')).join('');
+const userEmail = name => 'u' + userKey(name) + '@' + USER_DOMAIN;
+const localKey = id => 'cwr_profile_' + id;
+
+function setChip(state){
+  const c = $('syncChip');
+  c.textContent = state==='cloud' ? 'Synced' : state==='offline' ? 'Offline · saved on this device' : 'Local only · not synced';
+}
+
+async function hashPin(pin){
+  try{
+    if(window.crypto && crypto.subtle){
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('cwr:' + pin));
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(e){}
+  let h = 5381; const s = 'cwr:' + pin;
+  for(let i=0;i<s.length;i++) h = ((h*33) ^ s.charCodeAt(i)) >>> 0;
+  return 'x' + h.toString(16);
+}
+
+function readLocal(id){
+  try{ return JSON.parse(localStorage.getItem(localKey(id))); }catch(e){ return null; }
+}
+
+async function loadProfile(id){
+  const local = readLocal(id);
+  if(!db){ setChip('local'); return local; }
+  try{
+    const snap = await db.collection(COL).doc(id).get();
+    const cloud = snap.exists ? snap.data() : null;
+    setChip('cloud');
+    if(cloud && local) return (local.updatedAt||0) > (cloud.updatedAt||0) ? local : cloud;
+    return cloud || local;
+  }catch(e){
+    console.warn(e); setChip('offline'); return local;
+  }
+}
+
+let saveTimer = null, profile = null, pid = null;
+function saveProfile(immediate){
+  if(!profile) return;
+  profile.updatedAt = Date.now();
+  try{ localStorage.setItem(localKey(pid), JSON.stringify(profile)); }catch(e){}
+  if(!db) return;
+  clearTimeout(saveTimer);
+  const run = async ()=>{
+    try{ await db.collection(COL).doc(pid).set(JSON.parse(JSON.stringify(profile))); setChip('cloud'); }
+    catch(e){ console.warn(e); setChip('offline'); }
+  };
+  if(immediate) run(); else saveTimer = setTimeout(run, 800);
+}
+
+/* ---------- screens ---------- */
+function show(name){
+  ['login','home','session','summary'].forEach(s => $('screen-'+s).classList.toggle('hidden', s!==name));
+  document.body.classList.toggle('in-session', name==='session');
+  window.scrollTo(0,0);
+}
+
+/* ---------- login ---------- */
+const AUTH_ERRORS = {
+  'auth/invalid-credential':'Wrong username or password.',
+  'auth/wrong-password':'Wrong username or password.',
+  'auth/user-not-found':'Wrong username or password.',
+  'auth/invalid-email':'That username cannot be used. Try letters and numbers only.',
+  'auth/email-already-in-use':'That username is already taken. Try logging in instead.',
+  'auth/weak-password':'Password needs at least 6 characters.',
+  'auth/network-request-failed':'No internet connection.',
+  'auth/too-many-requests':'Too many tries. Please wait a few minutes.',
+  'auth/operation-not-allowed':'Username and password sign-in is not switched on in Firebase yet (see SETUP.md).',
+  'local/taken':'That username is already taken on this device. Try logging in instead.',
+  'local/bad':'Wrong username or password.'
+};
+let loginBusy = false;
+
+function enterProfile(id, data, name){
+  pid = id;
+  profile = data || { name: name || localStorage.getItem('cwr_last_name') || 'there', words:[], progress:{}, updatedAt:0 };
+  profile.words = profile.words || []; profile.progress = profile.progress || {};
+  $('passIn').value = ''; $('loginMsg').textContent = '';
+  if(!data) saveProfile(true);
+  renderHome();
+}
+
+async function doLogin(create){
+  if(loginBusy) return;
+  const name = $('nameIn').value.trim(), pw = $('passIn').value;
+  const msg = $('loginMsg'); msg.className = 'msg';
+  const fail = t => { msg.classList.add('err'); msg.textContent = t; };
+  if(!name) return fail('Please type a username.');
+  if(userKey(name).length > 60) return fail('That username is too long.');
+  if(pw.length < 6) return fail('Password needs at least 6 characters.');
+  loginBusy = true; msg.textContent = 'Loading…';
+  try{
+    if(auth){
+      const cred = create ? await auth.createUserWithEmailAndPassword(userEmail(name), pw)
+                          : await auth.signInWithEmailAndPassword(userEmail(name), pw);
+      localStorage.setItem('cwr_last_name', name);
+      enterProfile(cred.user.uid, await loadProfile(cred.user.uid), name);
+    }else{   // local-only mode: checked on this device
+      const id = docId(name), hash = await hashPin(pw), found = readLocal(id);
+      if(create && found) throw {code:'local/taken'};
+      if(!create && (!found || (found.passHash || found.pinHash) !== hash)) throw {code:'local/bad'};
+      localStorage.setItem('cwr_last_name', name);
+      setChip('local');
+      enterProfile(id, found || { name, passHash:hash, words:[], progress:{}, updatedAt:0 }, name);
+      if(create) saveProfile(true);
+    }
+  }catch(e){
+    console.warn(e);
+    fail(AUTH_ERRORS[e && e.code] || 'Could not log in. Please try again.');
+  }
+  loginBusy = false;
+}
+$('nameIn').value = localStorage.getItem('cwr_last_name') || '';
+$('loginBtn').onclick = ()=> doLogin(false);
+$('createBtn').onclick = ()=> doLogin(true);
+$('passIn').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(false); });
+$('logoutBtn').onclick = ()=>{
+  profile = null; pid = null;
+  if(auth) auth.signOut().catch(()=>{});
+  show('login');
+};
+// stay logged in on this device until "Log out" is tapped
+if(auth) auth.onAuthStateChanged(async user=>{
+  if(!user || profile || loginBusy) return;
+  loginBusy = true;
+  try{ enterProfile(user.uid, await loadProfile(user.uid)); }catch(e){ console.warn(e); }
+  loginBusy = false;
+});
+
+/* ---------- home ---------- */
+const prog = w => profile.progress[w] || (profile.progress[w] = {streak:0, attempts:0, right:0, wrong:0, last:0, mastered:false});
+const isHard = p => p.wrong >= HARD_MISSES;
+const needed = p => MASTERY + (isHard(p) ? 1 : 0);
+// when a word should next be tested (older saved data has no "due": derive it)
+const dueAt = p => p.due != null ? p.due : (p.mastered ? p.last + 7*DAY : 0);
+function schedule(p){
+  let days = INTERVAL_DAYS[Math.min(p.streak, INTERVAL_DAYS.length-1)];
+  if(isHard(p)) days = days/2;
+  p.due = days ? Date.now() + days*DAY - DAY/4 : 0;   // 6h slack so "tomorrow" works at any time of day
+}
+const statusOf = w => { const p = profile.progress[w]; return !p || !p.attempts ? 'new' : p.mastered ? 'mastered' : 'learning'; };
+
+function renderHome(){
+  show('home');
+  $('hello').textContent = 'Hi ' + profile.name + '! 👋';
+  const total = profile.words.length;
+  const c = {new:0, learning:0, mastered:0};
+  profile.words.forEach(o => c[statusOf(o.w)]++);
+  $('stTotal').textContent = total; $('stNew').textContent = c.new;
+  $('stLearn').textContent = c.learning; $('stMaster').textContent = c.mastered;
+  $('masterBar').style.width = (total ? c.mastered/total*100 : 0) + '%';
+  const nDue = total ? dueWords().length : 0;
+  $('homeMsg').textContent = !total ? 'Upload a word list to begin.'
+    : (nDue || c.new) ? nDue + ' to review today · ' + c.new + ' new' : 'Nothing due today – you can still practise.';
+  $('startBtn').disabled = !total;
+  const list = $('wordList'); list.innerHTML = '';
+  profile.words.forEach(o=>{
+    const s = statusOf(o.w), d = document.createElement('div');
+    d.innerHTML = '<span></span><span class="tag ' + s + '">' + s + '</span>';
+    const p = profile.progress[o.w];
+    d.firstChild.textContent = o.w + (o.p ? '  ' + o.p : '') + (o.m ? '  – ' + o.m : '') + (p && p.wrong ? '  · missed ' + p.wrong + '×' : '');
+    list.appendChild(d);
+  });
+}
+
+/* ---------- Excel upload ---------- */
+$('uploadBtn').onclick = ()=> $('fileIn').click();
+$('fileIn').onchange = async e=>{
+  const f = e.target.files[0]; e.target.value = '';
+  const msg = $('uploadMsg'); msg.className = 'msg';
+  if(!f) return;
+  try{
+    if(!window.XLSX) throw new Error('Excel reader did not load (check internet).');
+    const wb = XLSX.read(await f.arrayBuffer(), {type:'array'});
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
+    const heads = ['word','words','词语','词','字','生词','汉字','chinese','华文'];
+    const out = [], seen = new Set();
+    rows.forEach((r,i)=>{
+      const w = String(r[0]||'').trim();
+      if(!w || (i===0 && heads.includes(w.toLowerCase())) || seen.has(w)) return;
+      seen.add(w);
+      out.push({w, p:String(r[1]||'').trim(), m:String(r[2]||'').trim()});
+    });
+    if(!out.length) throw new Error('No words found in column A.');
+    let added = 0;
+    if($('replaceChk').checked){
+      const keep = {};
+      out.forEach(o=>{ if(profile.progress[o.w]) keep[o.w] = profile.progress[o.w]; });
+      profile.words = out; profile.progress = keep; added = out.length;
+    }else{
+      const have = new Map(profile.words.map(o=>[o.w,o]));
+      out.forEach(o=>{
+        if(have.has(o.w)){ const x = have.get(o.w); x.p = o.p || x.p; x.m = o.m || x.m; }
+        else{ profile.words.push(o); added++; }
+      });
+    }
+    saveProfile(true); renderHome();
+    $('uploadMsg').className = 'msg ok';
+    $('uploadMsg').textContent = '✓ ' + out.length + ' words read, ' + added + ' ' + ($('replaceChk').checked ? 'in list.' : 'new.');
+  }catch(err){
+    msg.classList.add('err'); msg.textContent = 'Could not read file: ' + err.message;
+  }
+};
+$('tplBtn').onclick = ()=>{
+  if(!window.XLSX){ alert('Excel library not loaded.'); return; }
+  const ws = XLSX.utils.aoa_to_sheet([['Word','Pinyin','Meaning'],['苹果','píng guǒ','apple'],['老师','lǎo shī','teacher'],['大','dà','big']]);
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Words');
+  XLSX.writeFile(wb, 'chinese-words-template.xlsx');
+};
+$('resetBtn').onclick = ()=>{
+  if(confirm('Reset ALL progress for ' + profile.name + '? The word list is kept.')){
+    profile.progress = {}; saveProfile(true); renderHome();
+  }
+};
+
+/* ---------- speech: matching ---------- */
+const norm = s => (s||'').replace(/[\s\p{P}\p{S}]/gu,'').toLowerCase();
+function toPinyin(s){
+  try{ return window.pinyinPro ? pinyinPro.pinyin(s, {toneType:'none', type:'array'}).join('').toLowerCase() : null; }
+  catch(e){ return null; }
+}
+function isMatch(target, alts){
+  const t = norm(target), tp = toPinyin(t);
+  for(const a of alts){
+    const n = norm(a); if(!n) continue;
+    if(n.includes(t)) return true;               // exact characters
+    const ap = tp && toPinyin(n);                 // same sounds, ignoring tones/homophones
+    if(ap && ap.includes(tp)) return true;
+  }
+  return false;
+}
+
+/* ---------- speech: recognition ---------- */
+let rec = null, recToken = 0, micBlocked = false, onHeard = null;
+function stopListen(){
+  recToken++;
+  if(rec){ try{ rec.onend = rec.onresult = rec.onerror = null; rec.abort(); }catch(e){} rec = null; }
+  $('micBtn').classList.remove('live');
+}
+function listen(){
+  stopListen();
+  if(!SR){ $('heardEl').textContent = 'Voice not supported here – parent can tap ✓ / ✗'; return false; }
+  const my = recToken;
+  let lastAlts = null;
+  const r = new SR();
+  r.lang = 'zh-CN'; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
+  r.onstart = ()=> { if(my===recToken) $('micBtn').classList.add('live'); };
+  r.onresult = e=>{
+    if(my!==recToken) return;
+    const res = e.results[e.results.length-1], alts = [];
+    for(let i=0;i<res.length;i++) alts.push(res[i].transcript);
+    $('heardEl').textContent = '👂 ' + alts[0];
+    lastAlts = res.isFinal ? null : alts;
+    if(onHeard) onHeard(alts, res.isFinal);
+  };
+  r.onerror = e=>{
+    if(my!==recToken) return;
+    if(e.error==='not-allowed' || e.error==='service-not-allowed'){
+      micBlocked = true;
+      $('heardEl').textContent = '🎤 Microphone blocked – allow it in browser settings, or parent taps ✓ / ✗';
+    }
+  };
+  r.onend = ()=>{
+    if(my!==recToken) return;
+    $('micBtn').classList.remove('live');
+    // some browsers stop without ever marking the result final: judge what was heard
+    if(lastAlts && onHeard){ const a = lastAlts; lastAlts = null; onHeard(a, true); if(my!==recToken) return; }
+    if(!micBlocked && sess && sess.listening) setTimeout(()=>{ if(my===recToken && sess && sess.listening) listen(); }, 250);
+  };
+  rec = r;
+  try{ r.start(); return true; }catch(e){ return false; }
+}
+
+/* ---------- speech: synthesis ---------- */
+let voices = [];
+function loadVoices(){ if(window.speechSynthesis) voices = speechSynthesis.getVoices(); }
+loadVoices(); if(window.speechSynthesis) speechSynthesis.onvoiceschanged = loadVoices;
+let liveUtterances = [];   // keep references so the browser doesn't drop queued speech
+function makeUtterance(text){
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN'; u.rate = 0.8;
+  const v = voices.find(v=>/zh[-_]CN/i.test(v.lang)) || voices.find(v=>/^zh/i.test(v.lang));
+  if(v) u.voice = v;
+  return u;
+}
+// Speak one or more phrases back to back, then call cb once.
+// All phrases are queued in one go: chaining a second speak() from the first one's
+// "end" event gets dropped by some browsers (notably iPad Safari and Chrome).
+function speak(texts, cb){
+  let done = false; const fin = ()=>{ if(!done){ done = true; cb && cb(); } };
+  if(!window.speechSynthesis){ fin(); return; }
+  if(!Array.isArray(texts)) texts = [texts];
+  try{
+    if(!voices.length) loadVoices();
+    if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+    liveUtterances = texts.map(makeUtterance);
+    const last = liveUtterances[liveUtterances.length-1];
+    last.onend = fin; last.onerror = fin;
+    liveUtterances.forEach(u => speechSynthesis.speak(u));
+    speechSynthesis.resume();
+    setTimeout(fin, 3000 + 2500*texts.length);
+  }catch(e){ fin(); }
+}
+// iPad only lets a page talk after speech has been started from a tap.
+function unlockSpeech(){
+  if(!window.speechSynthesis) return;
+  try{ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'zh-CN'; speechSynthesis.speak(u); }catch(e){}
+}
+
+/* ---------- session ---------- */
+let sess = null;
+const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
+function dueWords(){
+  const now = Date.now();
+  const rate = p => p.wrong / Math.max(1, p.attempts);
+  return shuffle(profile.words.filter(o => prog(o.w).attempts && dueAt(prog(o.w)) <= now))
+    .sort((a,b)=>{ const x = prog(a.w), y = prog(b.w); return (x.streak - y.streak) || (rate(y) - rate(x)); });   // weakest first
+}
+function buildQueue(){
+  const due = dueWords();
+  const fresh = shuffle(profile.words.filter(o => !prog(o.w).attempts));
+  let q = due.slice(0, SESSION_MAX - Math.min(fresh.length, NEW_MIN));
+  q = q.concat(fresh.slice(0, SESSION_MAX - q.length));
+  if(!q.length){   // nothing due and nothing new: free practice on the weakest words
+    const rate = p => p.wrong / Math.max(1, p.attempts);
+    q = shuffle(profile.words.slice()).sort((a,b)=> rate(prog(b.w)) - rate(prog(a.w))).slice(0, 10);
+  }
+  return shuffle(q).map(o => ({o, retry:0}));
+}
+
+$('startBtn').onclick = ()=>{
+  const q = buildQueue(); if(!q.length) return;
+  sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
+  micBlocked = false;
+  unlockSpeech();
+  show('session');
+  nextWord();
+};
+
+function setStage(cls){ const s=$('stage'); s.classList.remove('good','bad'); if(cls) s.classList.add(cls); }
+
+function startTimer(onEnd){
+  clearInterval(sess.timer);
+  const start = Date.now(), tok = sess.token;
+  const tick = ()=>{
+    if(!sess || tok!==sess.token) return;
+    const left = Math.max(0, TIME_LIMIT - (Date.now()-start)/1000);
+    $('timerFill').style.strokeDashoffset = 100*(1-left/TIME_LIMIT);
+    $('timerNum').textContent = Math.ceil(left);
+    $('timerBar').classList.toggle('low', left <= 5);
+    if(left <= 0){ clearInterval(sess.timer); onEnd(); }
+  };
+  sess.timer = setInterval(tick, 100); tick();
+}
+function clearTimer(){ if(sess){ clearInterval(sess.timer); sess.token++; } }
+
+function nextWord(){
+  if(sess.i >= sess.queue.length){ return finish(); }
+  const item = sess.queue[sess.i], o = item.o;
+  sess.item = item; sess.cur = o; sess.phase = 'read'; sess.token++;
+  $('progChip').textContent = (sess.i+1) + ' / ' + sess.queue.length;
+  $('wordEl').textContent = o.w;
+  $('pinyinEl').textContent = ''; $('meaningEl').textContent = '';
+  $('promptEl').textContent = 'Read the word! 读一读！';
+  $('heardEl').textContent = '';
+  $('nextBtn').classList.add('hidden'); $('okBtn').classList.remove('hidden'); $('noBtn').classList.remove('hidden');
+  setStage('');
+  sess.listening = true;
+  const tok = sess.token;
+  let wrongTimer = null;
+  onHeard = (alts, final) => {
+    clearTimeout(wrongTimer);
+    if(!sess || sess.phase!=='read' || tok!==sess.token) return;
+    if(isMatch(o.w, alts)) return readCorrect();
+    // finished speaking and it wasn't the word: wrong straight away, no waiting for the timer.
+    // (brief pause in case the recogniser is still adding to what it heard)
+    if(final && alts.some(a => norm(a))) wrongTimer = setTimeout(()=>{ if(sess && sess.phase==='read' && tok===sess.token) readWrong(); }, 500);
+  };
+  listen();
+  startTimer(()=> readWrong('time'));
+}
+
+function record(correct){
+  const o = sess.cur, p = prog(o.w), item = sess.item;
+  p.last = Date.now();
+  if(!item.retry){   // only the first read of a word in a session counts towards mastery
+    p.attempts++;
+    if(correct){ p.right++; p.streak++; if(p.streak >= needed(p)) p.mastered = true; }
+    else{ p.wrong++; p.streak = 0; p.mastered = false; }
+    schedule(p);
+    sess.results.push({o, ok:correct});
+  }
+  // missed: bring it back a few words later in this session
+  if(!correct && item.retry < RETRY_MAX){
+    sess.queue.splice(Math.min(sess.i + 1 + RETRY_GAP, sess.queue.length), 0, {o, retry:item.retry+1});
+  }
+  saveProfile();
+}
+
+function readCorrect(){
+  if(sess.phase!=='read') return;
+  sess.phase = 'feedback'; clearTimer(); sess.listening = false; stopListen();
+  record(true);
+  setStage('good'); $('promptEl').textContent = '✅ Correct! 对了！';
+  $('pinyinEl').textContent = sess.cur.p || '';
+  const s = sess, i = sess.i, shown = Date.now();
+  speak('对了', ()=>{
+    // move on once "对了" has been said (and the tick has been visible for a moment)
+    setTimeout(()=>{ if(sess===s && s.phase==='feedback' && s.i===i){ s.i++; nextWord(); } }, Math.max(0, 600-(Date.now()-shown)));
+  });
+}
+
+function readWrong(){
+  if(sess.phase!=='read') return;
+  sess.phase = 'teach'; clearTimer(); sess.listening = false; stopListen();
+  record(false);
+  const o = sess.cur;
+  setStage('bad');
+  $('pinyinEl').textContent = o.p || toPinyinTone(o.w);
+  $('meaningEl').textContent = o.m || '';
+  $('promptEl').textContent = '❌ 错！Listen… 听一听';
+  $('timerFill').style.strokeDashoffset = 100; $('timerNum').textContent = '';
+  $('okBtn').classList.add('hidden'); $('noBtn').classList.add('hidden'); $('nextBtn').classList.remove('hidden');
+  const tok = ++sess.token;
+  const afterWord = ()=>{
+    if(!sess || tok!==sess.token) return;
+    sess.phase = 'repeat';
+    $('promptEl').textContent = '🎤 Now you say it! 跟我读！';
+    sess.listening = true;
+    onHeard = alts => { if(sess && sess.phase==='repeat' && tok===sess.token && isMatch(o.w, alts)) repeatDone(true); };
+    setTimeout(()=>{ if(sess && tok===sess.token) listen(); }, 300);
+    startTimer(()=> repeatDone(false));
+  };
+  // say "错", then straight away the correct reading (short pause lets the mic switch off first)
+  setTimeout(()=>{ if(sess && tok===sess.token) speak(['错', o.w], afterWord); }, 250);
+}
+
+function toPinyinTone(s){
+  try{ return window.pinyinPro ? pinyinPro.pinyin(s) : ''; }catch(e){ return ''; }
+}
+
+function repeatDone(ok){
+  if(!sess || (sess.phase!=='repeat' && sess.phase!=='teach')) return;
+  sess.phase = 'feedback'; clearTimer(); sess.listening = false; stopListen();
+  if(ok){ setStage('good'); $('promptEl').textContent = '👍 Good! We will try it again later.'; }
+  setTimeout(()=>{ if(sess && sess.phase==='feedback'){ sess.i++; nextWord(); } }, ok ? 1100 : 0);
+}
+
+$('micBtn').onclick = ()=>{
+  if(!sess || !(sess.phase==='read' || sess.phase==='repeat')) return;
+  micBlocked = false; sess.listening = true; listen();
+};
+$('okBtn').onclick = ()=>{ if(sess && sess.phase==='read') readCorrect(); };
+$('noBtn').onclick = ()=>{ if(sess && sess.phase==='read') readWrong(); };
+$('nextBtn').onclick = ()=>{
+  if(!sess) return;
+  if(sess.phase==='teach'){ sess.token++; try{speechSynthesis.cancel();}catch(e){} }
+  repeatDone(false);
+};
+$('quitBtn').onclick = ()=>{
+  if(!confirm('Stop this session? Words already read are saved.')) return;
+  endSession(true);
+};
+
+function endSession(quit){
+  if(sess){ clearTimer(); sess.listening = false; }
+  stopListen(); try{ speechSynthesis.cancel(); }catch(e){}
+  saveProfile(true);
+  if(quit && (!sess || !sess.results.length)){ sess = null; return renderHome(); }
+  summary();
+}
+function finish(){ endSession(false); }
+
+function summary(){
+  const res = sess.results, ok = res.filter(r=>r.ok).length, bad = res.filter(r=>!r.ok);
+  const mastered = profile.words.filter(o=>prog(o.w).mastered).length;
+  $('sumEmoji').textContent = bad.length===0 ? '🏆' : ok >= bad.length ? '🌟' : '💪';
+  $('sumTitle').textContent = bad.length===0 ? 'Perfect! 太棒了！' : 'Well done! 做得好！';
+  $('sumLine').textContent = ok + ' of ' + res.length + ' read correctly on the first try. Mastered so far: ' + mastered + ' / ' + profile.words.length + '.';
+  $('reviseBlock').classList.toggle('hidden', !bad.length);
+  const box = $('reviseList'); box.innerHTML = '';
+  bad.forEach(r=>{
+    const d = document.createElement('div'); d.className = 'w';
+    const b = document.createElement('b'); b.textContent = r.o.w;
+    const s = document.createElement('span'); s.textContent = r.o.p || toPinyinTone(r.o.w);
+    d.appendChild(b); d.appendChild(s); box.appendChild(d);
+  });
+  show('summary');
+  sess = null;
+}
+$('homeBtn').onclick = renderHome;
+
+/* ---------- microphone test ---------- */
+$('micTestBtn').onclick = ()=>{
+  const m = $('micMsg'); m.className = 'msg';
+  if(!SR){ m.classList.add('err'); m.textContent = 'This browser has no speech recognition. Use Safari/Chrome/Edge, or the parent ✓ / ✗ buttons.'; return; }
+  m.textContent = '🎤 Say something in Chinese, e.g. 你好…';
+  const r = new SR(); r.lang = 'zh-CN'; r.interimResults = false;
+  r.onresult = e=>{ m.classList.add('ok'); m.textContent = '✓ Heard: ' + e.results[0][0].transcript; };
+  r.onerror = e=>{ m.classList.add('err'); m.textContent = 'Error: ' + e.error + (e.error==='not-allowed' ? ' – allow microphone / enable Dictation in iPad settings.' : ''); };
+  r.onend = ()=>{ if(m.textContent.startsWith('🎤')) m.textContent = 'Nothing heard. Try again.'; };
+  try{ r.start(); }catch(err){ m.classList.add('err'); m.textContent = 'Could not start: ' + err.message; }
+};
+
+setChip(db ? 'cloud' : 'local');
+})();
+</script>
+</body>
+</html>
