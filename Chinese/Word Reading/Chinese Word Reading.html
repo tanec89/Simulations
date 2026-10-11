@@ -86,6 +86,7 @@
   h2.sub{ font-size:21px; margin-top:24px; }
   .subtitle{ color:var(--ink2); font-size:17px; margin:0 0 24px; }
   .note{ color:var(--ink2); font-size:15px; margin:8px 0 16px; }
+  .note.ver{ font-size:13px; margin:16px 0 0; text-align:center; }
   body.in-session h1, body.in-session .subtitle{ display:none; }
 
   /* cards */
@@ -252,6 +253,7 @@
     <div style="height:8px"></div>
     <button class="big grey" id="createBtn">Create new profile</button>
     <div class="msg" id="loginMsg"></div>
+    <p class="note ver"></p>
   </div>
 
   <!-- HOME -->
@@ -299,6 +301,7 @@
         <button class="grey" id="resetBtn">Reset progress</button>
       </div>
       <div class="msg" id="micMsg"></div>
+      <p class="note ver"></p>
     </div>
   </div>
 
@@ -360,6 +363,7 @@
 'use strict';
 
 /* ---------- constants ---------- */
+const APP_VERSION = '5';    // shown on screen so you can tell which version a device has loaded; bump on every release
 const TIME_LIMIT = 20;      // seconds to read a word
 const MASTERY = 3;          // correct first-try reads in a row to master a word
 const HARD_MISSES = 3;      // a word missed this many times is "hard": needs one extra correct read, and comes back twice as often
@@ -757,12 +761,15 @@ function listen(){
 let voices = [];
 function loadVoices(){ if(window.speechSynthesis) voices = speechSynthesis.getVoices(); }
 loadVoices(); if(window.speechSynthesis) speechSynthesis.onvoiceschanged = loadVoices;
+const APPLE_TOUCH = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const zhVoice = () => voices.find(v=>/zh[-_]CN/i.test(v.lang)) || voices.find(v=>/^zh/i.test(v.lang));
 let liveUtterances = [];   // keep references so the browser doesn't drop queued speech
 function makeUtterance(text){
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN'; u.rate = 0.8;
-  const v = voices.find(v=>/zh[-_]CN/i.test(v.lang)) || voices.find(v=>/^zh/i.test(v.lang));
-  if(v) u.voice = v;
+  // iPad/iPhone: give only the language and let the device use its own Chinese voice.
+  // Picking a voice by hand there can select one that is listed but silent.
+  if(!APPLE_TOUCH){ const v = zhVoice(); if(v) u.voice = v; }
   return u;
 }
 // Speak one or more phrases back to back, then call cb once.
@@ -780,7 +787,7 @@ function speak(texts, cb, maxMs){
     const last = liveUtterances[liveUtterances.length-1];
     last.onend = fin; last.onerror = fin;
     liveUtterances.forEach(u => speechSynthesis.speak(u));
-    speechSynthesis.resume();
+    if(!APPLE_TOUCH) speechSynthesis.resume();
     setTimeout(fin, maxMs || 3000 + 2500*texts.length);
   }catch(e){ fin(); }
 }
@@ -984,10 +991,24 @@ $('soundTestBtn').onclick = ()=>{
   const m = $('micMsg'); m.className = 'msg';
   if(!window.speechSynthesis){ m.classList.add('err'); m.textContent = 'This browser cannot speak.'; return; }
   loadVoices();
-  const zh = voices.filter(v => /^zh/i.test(v.lang)).length;
-  m.textContent = '🔊 You should hear "对了" then "错了". Chinese voices on this device: ' + zh + '.'
-    + (zh ? ' If it is silent, turn the volume up and switch off Silent Mode.' : ' No Chinese voice found – add one in Settings → Accessibility → Spoken Content → Voices.');
+  const zh = voices.filter(v => /^zh/i.test(v.lang));
+  const st = {started:false, ended:false, error:''};
+  const info = ()=> 'Chinese voices: ' + zh.length + (zh.length ? ' (' + zh.slice(0,3).map(v=>v.name).join(', ') + ')' : '')
+    + ' · started: ' + (st.started ? 'yes' : 'no') + ' · finished: ' + (st.ended ? 'yes' : 'no') + (st.error ? ' · error: ' + st.error : '');
+  m.textContent = '🔊 Playing "对了" then "错了"…';
   speak(['对了', '错了']);
+  liveUtterances.forEach((u,i)=>{
+    u.addEventListener('start', ()=>{ st.started = true; });
+    u.addEventListener('error', e=>{ st.error = e.error || 'unknown'; });
+    if(i === liveUtterances.length-1) u.addEventListener('end', ()=>{ st.ended = true; });
+  });
+  setTimeout(()=>{
+    const verdict = st.error ? 'The device refused to speak.'
+      : !st.started ? 'Speech never started on this device.'
+      : 'The device says it spoke. If you heard nothing, it is muted: turn the volume up and switch off Silent Mode (bell icon in Control Centre).';
+    m.textContent = verdict + ' [' + info() + ']';
+    if(st.error || !st.started) m.classList.add('err');
+  }, 5000);
 };
 
 /* ---------- microphone test ---------- */
@@ -1003,6 +1024,7 @@ $('micTestBtn').onclick = ()=>{
 };
 
 setChip(db ? 'cloud' : 'local');
+document.querySelectorAll('.ver').forEach(e => e.textContent = 'Version ' + APP_VERSION);
 })();
 </script>
 </body>
