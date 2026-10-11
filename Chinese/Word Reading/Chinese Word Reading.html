@@ -329,6 +329,7 @@
       <div class="ring" id="timerBar"><svg viewBox="0 0 100 100"><circle class="track" cx="50" cy="50" r="44" pathLength="100"/><circle id="timerFill" cx="50" cy="50" r="44" pathLength="100"/></svg><b id="timerNum">20</b></div>
       <div class="prompt" id="promptEl"></div>
       <div class="heard" id="heardEl"></div>
+      <div class="heard" id="micState"></div>
       <button class="mic" id="micBtn" title="Tap to speak"><svg viewBox="0 0 24 24"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a1 1 0 1 1 2 0 8 8 0 0 1-7 7.93V21h2a1 1 0 1 1 0 2H9a1 1 0 1 1 0-2h2v-2.07A8 8 0 0 1 4 11a1 1 0 1 1 2 0 6 6 0 0 0 12 0z"/></svg></button>
       <div class="parent">
         <span>Parent:</span>
@@ -363,7 +364,7 @@
 'use strict';
 
 /* ---------- constants ---------- */
-const APP_VERSION = '5';    // shown on screen so you can tell which version a device has loaded; bump on every release
+const APP_VERSION = '6';    // shown on screen so you can tell which version a device has loaded; bump on every release
 const TIME_LIMIT = 20;      // seconds to read a word
 const MASTERY = 3;          // correct first-try reads in a row to master a word
 const HARD_MISSES = 3;      // a word missed this many times is "hard": needs one extra correct read, and comes back twice as often
@@ -706,56 +707,108 @@ function isMatch(target, alts){
 }
 
 /* ---------- speech: recognition ---------- */
-let rec = null, recToken = 0, micBlocked = false, onHeard = null;
-// Resolves once the microphone has really switched off. On iPad, speech played while the
-// mic is still shutting down comes out silent, so anything spoken waits for this first.
-let micReleased = Promise.resolve();
-function stopListen(){
-  recToken++;
-  if(rec){
-    const r = rec; rec = null;
-    micReleased = new Promise(res=>{
-      r.onresult = r.onerror = null;
-      r.onend = ()=> setTimeout(res, 200);
-      try{ r.abort(); }catch(e){ res(); }
-      setTimeout(res, 1000);
-    });
+// One shared recogniser for the whole page. iPad Safari gets stuck if a recogniser is
+// abort()ed mid-flight or a second one is started before the first has ended, so:
+//  - there is only ever one instance,
+//  - it is stopped with stop() (never abort) and never restarted until its "end" event,
+//  - a watchdog restarts it if the browser drops a start or goes quiet.
+let micBlocked = false, onHeard = null;
+const Mic = (()=>{
+  let r = null, want = false, running = false, gotStart = false, startedAt = 0, endedAt = 0;
+  let win = 0, runWin = -1, handler = null, pending = null, lastFinal = false, lastError = '';
+  let restartT = null, startFails = 0, waiters = [], errRun = 0, errText = '';
+  const state = t => { $('micState').textContent = t; };
+  const live = on => $('micBtn').classList.toggle('live', on);
+
+  function build(){
+    r = new SR();
+    r.lang = 'zh-CN'; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
+    r.onstart = ()=>{ gotStart = true; if(want && runWin === win){ live(true); state('Listening… 请读'); } };
+    r.onresult = e=>{
+      if(!want || runWin !== win || !handler) return;   // late results from an earlier word are ignored
+      const res = e.results[e.results.length-1], alts = [];
+      for(let i=0;i<res.length;i++) alts.push(res[i].transcript);
+      lastFinal = !!res.isFinal; pending = lastFinal ? null : alts; errRun = 0;
+      $('heardEl').textContent = '👂 ' + alts[0];
+      handler(alts, lastFinal);
+    };
+    r.onerror = e=>{
+      lastError = e.error || 'error';
+      errText = lastError + (e.message ? ' (' + e.message + ')' : '');   // shown on screen to help diagnose a device
+      if(lastError === 'not-allowed' || lastError === 'service-not-allowed') micBlocked = true;
+    };
+    r.onend = ()=> ended(runWin);
   }
-  $('micBtn').classList.remove('live');
-}
-function listen(){
-  stopListen();
-  if(!SR){ $('heardEl').textContent = 'Voice not supported here – parent can tap ✓ / ✗'; return false; }
-  const my = recToken;
-  let lastAlts = null;
-  const r = new SR();
-  r.lang = 'zh-CN'; r.interimResults = true; r.maxAlternatives = 5; r.continuous = false;
-  r.onstart = ()=> { if(my===recToken) $('micBtn').classList.add('live'); };
-  r.onresult = e=>{
-    if(my!==recToken) return;
-    const res = e.results[e.results.length-1], alts = [];
-    for(let i=0;i<res.length;i++) alts.push(res[i].transcript);
-    $('heardEl').textContent = '👂 ' + alts[0];
-    lastAlts = res.isFinal ? null : alts;
-    if(onHeard) onHeard(alts, res.isFinal);
-  };
-  r.onerror = e=>{
-    if(my!==recToken) return;
-    if(e.error==='not-allowed' || e.error==='service-not-allowed'){
-      micBlocked = true;
-      $('heardEl').textContent = '🎤 Microphone blocked – allow it in browser settings, or parent taps ✓ / ✗';
+  function ended(wasWin){
+    running = false; gotStart = false; endedAt = Date.now(); live(false);
+    waiters.splice(0).forEach(f => f());
+    // some browsers stop without ever marking the result final: judge what was heard
+    if(want && wasWin === win && pending && handler){ const a = pending; pending = null; lastFinal = true; handler(a, true); }
+    pending = null;
+    if(!want){ state(''); return; }
+    if(micBlocked){ state('Microphone blocked – tap the mic button, or parent taps ✓ / ✗'); return; }
+    const failed = lastError && lastError !== 'no-speech';
+    errRun = failed ? errRun + 1 : 0;
+    if(failed) state('Microphone: ' + errText + ' – trying again');
+    if(errRun && errRun % 3 === 0){ drop(); schedule(1000); return; }   // keeps failing: start over with a fresh recogniser
+    // after a finished phrase, wait a little longer so a "wrong" verdict can land before the mic restarts
+    schedule(failed ? 500 : wasWin !== win ? 100 : lastFinal ? 700 : 250);
+  }
+  function schedule(ms){ clearTimeout(restartT); restartT = setTimeout(tryStart, ms); }
+  function drop(){   // give up on a stuck recogniser and make a fresh one next time
+    if(r){ r.onstart = r.onresult = r.onerror = r.onend = null; if(running){ try{ r.abort(); }catch(e){} } }
+    r = null; startFails = 0;
+    if(running){ running = false; gotStart = false; endedAt = Date.now(); live(false); waiters.splice(0).forEach(f => f()); }
+  }
+  function tryStart(){
+    clearTimeout(restartT); restartT = null;
+    if(!want || running || micBlocked) return;
+    if(!r) build();
+    lastFinal = false; lastError = ''; pending = null;
+    try{
+      r.start();
+      running = true; gotStart = false; runWin = win; startedAt = Date.now(); startFails = 0;
+    }catch(e){   // usually "already started": the last session has not finished shutting down
+      errText = 'could not start (' + (e && e.name || 'error') + ')';
+      if(++startFails >= 4) drop();
+      schedule(400);
+    }
+  }
+  setInterval(()=>{
+    if(!want || micBlocked || !SR) return;
+    const now = Date.now();
+    if(!running && !restartT && now - endedAt > 1200) tryStart();             // a restart got lost
+    else if(running && !gotStart && now - startedAt > 4000){ drop(); schedule(300); }   // start never happened
+  }, 1000);
+
+  return {
+    begin(h){
+      if(!SR){ state('Voice not supported here – parent can tap ✓ / ✗'); return; }
+      win++; handler = h; want = true; micBlocked = false; pending = null; errRun = 0; errText = '';
+      state('Starting microphone…');
+      if(running){ try{ r.stop(); }catch(e){} }   // finish the old session first; "end" starts the new one
+      else schedule(0);
+    },
+    end(){
+      want = false; handler = null; pending = null;
+      clearTimeout(restartT); restartT = null;
+      live(false); state('');
+      if(running){ try{ r.stop(); }catch(e){} }
+    },
+    lastError: () => errText,
+    // resolves once the microphone has really switched off. On iPad, speech played while
+    // the mic is still shutting down comes out silent, so anything spoken waits for this.
+    released(){
+      if(!running) return Promise.resolve();
+      return new Promise(res=>{
+        let done = false; const fin = ()=>{ if(!done){ done = true; setTimeout(res, 200); } };
+        waiters.push(fin); setTimeout(fin, 1500);
+      });
     }
   };
-  r.onend = ()=>{
-    if(my!==recToken) return;
-    $('micBtn').classList.remove('live');
-    // some browsers stop without ever marking the result final: judge what was heard
-    if(lastAlts && onHeard){ const a = lastAlts; lastAlts = null; onHeard(a, true); if(my!==recToken) return; }
-    if(!micBlocked && sess && sess.listening) setTimeout(()=>{ if(my===recToken && sess && sess.listening) listen(); }, 250);
-  };
-  rec = r;
-  try{ r.start(); return true; }catch(e){ return false; }
-}
+})();
+function listen(){ Mic.begin((alts, final) => { if(onHeard) onHeard(alts, final); }); }
+function stopListen(){ Mic.end(); }
 
 /* ---------- speech: synthesis ---------- */
 let voices = [];
@@ -775,7 +828,7 @@ function makeUtterance(text){
 // Speak one or more phrases back to back, then call cb once.
 // All phrases are queued in one go: chaining a second speak() from the first one's
 // "end" event gets dropped by some browsers (notably iPad Safari and Chrome).
-function speakAfterMic(texts, cb){ micReleased.then(()=> speak(texts, cb)); }
+function speakAfterMic(texts, cb){ Mic.released().then(()=> speak(texts, cb)); }
 function speak(texts, cb, maxMs){
   let done = false; const fin = ()=>{ if(!done){ done = true; cb && cb(); } };
   if(!window.speechSynthesis){ fin(); return; }
@@ -928,7 +981,7 @@ function readWrong(){
     startTimer(()=> repeatDone(false));
   };
   // say "错了", then straight away the correct reading (once the mic has switched off)
-  micReleased.then(()=>{ if(sess && tok===sess.token) speak(['错了', o.w], afterWord); });
+  Mic.released().then(()=>{ if(sess && tok===sess.token) speak(['错了', o.w], afterWord); });
 }
 
 function toPinyinTone(s){
@@ -1016,11 +1069,15 @@ $('micTestBtn').onclick = ()=>{
   const m = $('micMsg'); m.className = 'msg';
   if(!SR){ m.classList.add('err'); m.textContent = 'This browser has no speech recognition. Use Safari/Chrome/Edge, or the parent ✓ / ✗ buttons.'; return; }
   m.textContent = '🎤 Say something in Chinese, e.g. 你好…';
-  const r = new SR(); r.lang = 'zh-CN'; r.interimResults = false;
-  r.onresult = e=>{ m.classList.add('ok'); m.textContent = '✓ Heard: ' + e.results[0][0].transcript; };
-  r.onerror = e=>{ m.classList.add('err'); m.textContent = 'Error: ' + e.error + (e.error==='not-allowed' ? ' – allow microphone / enable Dictation in iPad settings.' : ''); };
-  r.onend = ()=>{ if(m.textContent.startsWith('🎤')) m.textContent = 'Nothing heard. Try again.'; };
-  try{ r.start(); }catch(err){ m.classList.add('err'); m.textContent = 'Could not start: ' + err.message; }
+  let got = false;
+  onHeard = (alts, final) => { got = true; m.className = 'msg ok'; m.textContent = '✓ Heard: ' + alts[0]; if(final) stopListen(); };
+  listen();
+  setTimeout(()=>{
+    if(sess) return;
+    stopListen();
+    const err = Mic.lastError();
+    if(!got){ m.classList.add('err'); m.textContent = (micBlocked ? 'Microphone blocked – allow the microphone and enable Dictation in iPad settings.' : 'Nothing heard. Try again.') + (err ? ' [last error: ' + err + ']' : ''); }
+  }, 8000);
 };
 
 setChip(db ? 'cloud' : 'local');
