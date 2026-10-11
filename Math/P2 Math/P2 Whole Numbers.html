@@ -37,7 +37,7 @@
   #stats { display: flex; flex-direction: column; gap: 6px; }
   .panel { background: #f4ecd8; border: 3px solid #1b2a41; border-radius: 10px; padding: 5px 10px; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
   .panel h3 { margin: 0 0 2px; font: 9px 'Press Start 2P', monospace; color: #c0392b; }
-  #hearts { font-size: 24px; line-height: 1.1; letter-spacing: 2px; white-space: nowrap; }
+  #hearts { font-size: 19px; line-height: 1.2; letter-spacing: 1px; white-space: nowrap; }
   #keys, #power { font-size: 19px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
   #tools { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
   .tool { border: 3px solid #1b2a41; background: #fff; border-radius: 10px; font: 700 20px 'Baloo 2', sans-serif; color: #1b2a41; padding: 4px 12px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
@@ -124,6 +124,7 @@
     <button class="btn" id="resumeBtn">RESUME</button>
     <div class="row">
       <button class="btn alt" id="muteBtn">SOUND: ON</button>
+      <button class="btn alt" id="musicBtn">MUSIC: ON</button>
       <button class="btn alt" id="restartBtn">RESTART STAGE</button>
       <button class="btn alt" id="quitBtn">MENU</button>
     </div>
@@ -151,7 +152,7 @@
 <script>
 (() => {
 'use strict';
-const APP_VERSION = 'v1.0';
+const APP_VERSION = 'v1.1';
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -161,7 +162,7 @@ $('ver').textContent = APP_VERSION;
 // ---------- saved progress ----------
 const LEVELS = ['easy', 'mid', 'hard'];
 const SAVE_KEY = 'number-bomber-v1';
-let save = { stars: { easy: [0, 0, 0, 0, 0], mid: [0, 0, 0, 0, 0], hard: [0, 0, 0, 0, 0] }, missed: { easy: [], mid: [], hard: [] }, hero: 0, tut: false };
+let save = { stars: { easy: [0, 0, 0, 0, 0], mid: [0, 0, 0, 0, 0], hard: [0, 0, 0, 0, 0] }, missed: { easy: [], mid: [], hard: [] }, hero: 0, tut: false, music: true };
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.stars && s.missed) save = Object.assign(save, s); } catch (e) {}
 const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
 const totalStars = () => LEVELS.reduce((n, l) => n + save.stars[l].reduce((a, b) => a + b, 0), 0);
@@ -208,10 +209,44 @@ function speak(text) {
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = .9;
+    duckUntil = Date.now() + 1200 + text.length * 75;       // the music goes quiet while the voice is reading
     speechSynthesis.speak(u);
   } catch (e) {}
 }
-const hush = () => { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} };
+const hush = () => { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} duckUntil = 0; };
+
+// ---------- music ----------
+// a short looping tune made from beeps, so there is no sound file to download; null is a rest
+const TUNE = [
+  0, 4, 7, 4, 0, 4, 7, 12,        5, 9, 12, 9, 5, 9, 12, 9,        7, 11, 14, 11, 7, 11, 14, 11,     12, null, 7, null, 4, 7, 0, null,
+  7, null, 4, 7, 9, 7, 4, null,   9, 12, 9, 5, 9, null, 5, null,   5, 9, 7, 11, 9, 12, 11, 14,       12, null, 12, null, 12, null, null, null
+];
+const BASS = [0, 5, 7, 0, 0, -3, 5, 0];                     // one bass note for each bar of eight steps
+const KEYS = [0, 2, -3, 5, -5];                             // each stage plays the tune a little higher or lower
+let duckUntil = 0, musicGain, nextNote = 0, noteIx = 0, notesPlayed = 0;
+function tone(freq, at, dur, type, vol) {
+  const a = audio(), o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(vol, at); g.gain.exponentialRampToValueAtTime(.0001, at + dur);
+  o.connect(g); g.connect(musicGain); o.start(at); o.stop(at + dur);
+  notesPlayed++;
+}
+function musicTick() {
+  if (mode !== 'play' || muted || !save.music) return;
+  try {
+    const a = audio();
+    if (!musicGain) { musicGain = a.createGain(); musicGain.connect(a.destination); }
+    musicGain.gain.setTargetAtTime(Date.now() < duckUntil ? .25 : 1, a.currentTime, .15);
+    if (nextNote < a.currentTime) nextNote = a.currentTime + .05;
+    const castle = stage === BOSS_STAGE, beat = castle ? .17 : .21, pitch = s => Math.pow(2, (s + KEYS[stage]) / 12);
+    while (nextNote < a.currentTime + .3) {                // line up the next few notes just ahead of time
+      const i = noteIx % TUNE.length, s = TUNE[i];
+      if (s !== null) tone(523.25 * pitch(s), nextNote, beat * .9, castle ? 'sawtooth' : 'square', castle ? .018 : .022);
+      if (i % 4 === 0) tone(130.81 * pitch(BASS[i >> 3] + (i % 8 ? 7 : 0)), nextNote, beat * 1.8, 'triangle', .07);
+      nextNote += beat; noteIx++;
+    }
+  } catch (e) {}
+}
 
 // ---------- questions ----------
 let level = 'easy', stage = 0;
@@ -289,16 +324,22 @@ const SKILLS = {
     return one((big() ? 'Blast this number:' : say) + blocks(n), say, n, wrongs(n, mistakes(n)), w => `${w} is ${describe(w)}.`);
   },
   place() {
-    const n = rndNum(), [h, t, o] = D(n), v = rnd(0, 3), names = ['hundreds', 'tens', 'ones'], digs = [h, t, o];
-    const i = big() ? rnd(0, 2) : 1;
+    const n = rndNum(), [h, t, o] = D(n), v = rnd(0, 4), names = ['hundreds', 'tens', 'ones'], digs = [h, t, o];
+    const i = big() ? rnd(0, 2) : rnd(1, 2), mine = big() ? digs : [t, o], once = d => mine.filter(x => x === d).length === 1;
     if (v === 2 && (big() || t !== o)) {
       const html = `Blast the number with <b>${digs[i]}</b> in the <b>${names[i]}</b> place.`;
       return one(html, plain(html), n, wrongs(n, [...mistakes(n), o * 11, rnd(1, 9) * 10 + t], w => D(w)[i] !== digs[i]), w => `${w} has ${D(w)[i]} in the ${names[i]} place.`);
     }
-    if (v === 3 && big() && h !== t && t !== o && h !== o && t && o) {
-      const d = digs[i], ans = d * [100, 10, 1][i], j = (i + 1) % 3;
-      const html = `In <b>${n}</b>, what is the value of the digit <b>${d}</b>?`;
-      return one(html, plain(html), ans, [...[d, d * 10, d * 100].filter(x => x !== ans), digs[j] * [100, 10, 1][j]], () => `In ${n}, the digit ${d} is in the ${names[i]} place.`);
+    if (v === 3 && digs[i] && once(digs[i])) {             // "Look at 750. What is the value of the digit 5?" -> 50
+      const d = digs[i], ans = d * [100, 10, 1][i];
+      const html = `Look at <b>${n}</b>. What is the value of the digit <b>${d}</b>?`;
+      return one(html, plain(html), ans, wrongs(ans, [d, d * 10, d * 100, ...mine, h * 100, t * 10, n]), () => `In ${n}, the digit ${d} is in the ${names[i]} place.`);
+    }
+    if (v === 4 && new Set(mine).size === mine.length) {   // "Look at 698. Which digit is in the hundreds place?" -> 6
+      const others = mine.filter(x => x !== digs[i]);
+      for (const x of shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])) if (others.length < 3 && !mine.includes(x)) others.push(x);
+      const html = `Look at <b>${n}</b>. Which digit is in the <b>${names[i]}</b> place?`;
+      return one(html, plain(html), digs[i], others, w => digs.includes(w) && (big() || w !== h) ? `In ${n}, the digit ${w} is in the ${names[digs.lastIndexOf(w)]} place.` : `${w} is not a digit in ${n}.`);
     }
     const parts = big() ? [h * 100, t * 10, o].filter(x => x) : [t * 10, o].filter(x => x);
     const sum = v === 1 && parts.length > 1;
@@ -401,9 +442,9 @@ const ROSTER = {
 };
 // milliseconds a monster takes to cross one square (the bomber takes 190)
 const SPEED = {
-  easy: { blob: 430, bat: 310, chaser: 340, ghost: 460, num: 520, boss: 520 },
-  mid:  { blob: 350, bat: 250, chaser: 290, ghost: 420, num: 430, boss: 440 },
-  hard: { blob: 290, bat: 210, chaser: 235, ghost: 380, num: 360, boss: 380 }
+  easy: { blob: 640, bat: 480, chaser: 520, ghost: 680, num: 720, boss: 720 },
+  mid:  { blob: 530, bat: 400, chaser: 440, ghost: 600, num: 620, boss: 620 },
+  hard: { blob: 440, bat: 330, chaser: 360, ghost: 520, num: 520, boss: 520 }
 };
 const HEROES = [
   { name: 'Sunny', helmet: '#ff9f1c', suit: '#3b82f6', need: 0 },
@@ -419,7 +460,7 @@ const FLOOR = 0, WALL = 1, BRICK = 2, CRATE = 3;
 const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const DIRKEYS = Object.keys(DIRS), OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
 const START = [1, 1];
-const STEP_MS = 190, FAST_MS = 135, FUSE_MS = 2500, BLAST_MS = 450, SAFE_MS = 2000, MAX_HEARTS = 3, FREEZE_MS = 3000;
+const STEP_MS = 190, FAST_MS = 135, FUSE_MS = 2500, BLAST_MS = 450, SAFE_MS = 2000, MAX_HEARTS = 10, FREEZE_MS = 3000;
 
 let grid, fx, mode = 'title';
 const player = { tx: 1, ty: 1, nx: 1, ny: 1, t: 0, dir: 'down', moving: false, step: 0, safe: 0, hearts: MAX_HEARTS };
@@ -495,7 +536,10 @@ function buildQueue() {
   }
 }
 
-function renderHearts() { $('hearts').textContent = '❤️'.repeat(player.hearts) + '🤍'.repeat(MAX_HEARTS - player.hearts); }
+function renderHearts() {
+  const h = i => i < player.hearts ? '❤️' : '🤍', row = from => Array.from({ length: 5 }, (_, i) => h(from + i)).join('');
+  $('hearts').innerHTML = row(0) + '<br>' + row(5);          // ten hearts, in two rows of five
+}
 function renderKeys() { $('keys').textContent = boss ? (keys < need ? `👾 ${need - keys} to go` : '👾 beaten!') : `🔑 ${keys} / ${need}`; }
 function renderPower() {
   const t = power ? `${POWERS[power.type][0]} ${Math.ceil(power.left / 1000)}s` : '🔥'.repeat(streak % 3) + '▫️'.repeat(3 - streak % 3);
@@ -1024,6 +1068,10 @@ $('overMenuBtn').onclick = $('clearMenuBtn').onclick = $('quitBtn').onclick = go
 $('pauseBtn').onclick = () => { if (mode === 'play') pause(); };
 $('resumeBtn').onclick = resume;
 $('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = 'SOUND: ' + (muted ? 'OFF' : 'ON'); if (muted) hush(); };
+const showMusic = () => { $('musicBtn').textContent = 'MUSIC: ' + (save.music ? 'ON' : 'OFF'); };
+$('musicBtn').onclick = () => { save.music = !save.music; persist(); showMusic(); };
+showMusic();
+setInterval(musicTick, 100);
 $('sayBtn').onclick = () => speak(lastSay);
 if (document.fonts) document.fonts.load('800 16px "Baloo 2"');
 
@@ -1033,7 +1081,7 @@ if (location.search.includes('debug')) {
   window.nbDebug = {
     tick(ms) { for (let t = 0; t < ms; t += 16) { clock += 16; update(16); } draw(clock); return this.state(); },
     state: () => ({ mode, level, stage, cell: playerCell(), hearts: player.hearts, safe: Math.round(player.safe), bombs: bombs.length, blasts: blasts.length, grid: grid.map(r => r.join('')), fx: fx.flat().filter(Boolean).length,
-      say: lastSay, kind: mission && mission.kind, skill: mission && mission.skill, progress: mission && mission.progress, crates: crates.map(c => ({ ...c })), keys, need, wrongBlasts, keyItem, door, streak, power: power && power.type, freeze: Math.round(freeze), tut,
+      notes: notesPlayed, say: lastSay, kind: mission && mission.kind, skill: mission && mission.skill, progress: mission && mission.progress, crates: crates.map(c => ({ ...c })), keys, need, wrongBlasts, keyItem, door, streak, power: power && power.type, freeze: Math.round(freeze), tut,
       monsters: monsters.map(m => ({ type: m.type, x: m.x, y: m.y, item: m.item, stun: Math.round(m.stun), hp: m.hp })), queue: [...queue], toast: $('toast').classList.contains('show') ? $('toast').textContent : '', save: JSON.parse(JSON.stringify(save)) }),
     warp(x, y) { Object.assign(player, { tx: x, ty: y, nx: x, ny: y, moving: false, t: 0 }); },
     calm() { monsters = monsters.filter(m => m.type === 'num' || m.type === 'boss'); },
