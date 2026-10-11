@@ -13,7 +13,7 @@
     --bg:#F2F2F7;
     --material:rgba(255,255,255,0.72); --material-border:rgba(0,0,0,0.1);
     --fill:rgba(0,0,0,0.05);
-    --ink:#1C1C1E; --ink2:#5C5C61;
+    --ink:#1C1C1E; --ink2:#5C5C61; --on-ink:#FFFFFF;
     --accent:#007AFF; --link:#0066CC;
     --green:#34C759; --red:#FF3B30; --orange:#FF9500;
     --green-text:#1A7030; --red-text:#C4281C; --orange-text:#9A5200;
@@ -32,7 +32,7 @@
       --bg:#000000;
       --material:rgba(28,28,30,0.7); --material-border:rgba(255,255,255,0.15);
       --fill:rgba(255,255,255,0.1);
-      --ink:#FFFFFF; --ink2:#AEAEB2;
+      --ink:#FFFFFF; --ink2:#AEAEB2; --on-ink:#000000;
       --accent:#0A84FF; --link:#4DA3FF;
       --green:#30D158; --red:#FF453A; --orange:#FF9F0A;
       --green-text:#30D158; --red-text:#FF6961; --orange-text:#FF9F0A;
@@ -96,7 +96,7 @@
   @keyframes rise{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
 
   /* inputs */
-  label{ font-weight:600; font-size:15px; color:var(--ink2); display:block; margin:16px 0 8px; }
+  label,.label{ font-weight:600; font-size:15px; color:var(--ink2); display:block; margin:16px 0 8px; }
   label.check{ display:flex; align-items:center; gap:8px; min-height:44px; margin:8px 0 0; font-weight:400; }
   input[type=text],input[type=password]{
     width:100%; height:48px; font:inherit; font-size:19px; padding:0 16px; color:var(--ink);
@@ -149,7 +149,7 @@
   /* home */
   .greeting{ display:flex; justify-content:space-between; align-items:center; gap:16px; }
   .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:16px 0; }
-  .stat{ background:var(--fill); border-radius:12px; padding:16px 8px; text-align:center;
+  .stat{ background:var(--fill); border-radius:12px; padding:16px 8px; text-align:center; cursor:pointer;
     transition:transform var(--ease), box-shadow var(--ease); animation:rise 400ms cubic-bezier(0.25,0.1,0.25,1) both; }
   .stat:nth-child(1){ animation-delay:50ms; } .stat:nth-child(2){ animation-delay:100ms; }
   .stat:nth-child(3){ animation-delay:150ms; } .stat:nth-child(4){ animation-delay:200ms; }
@@ -161,8 +161,31 @@
   details summary{ cursor:pointer; font-weight:600; color:var(--link); min-height:44px; display:flex; align-items:center; list-style:none; margin-top:8px; }
   details summary::-webkit-details-marker{ display:none; }
   .wordlist{ max-height:280px; overflow:auto; background:var(--fill); border-radius:12px; }
-  .wordlist div{ display:flex; justify-content:space-between; gap:16px; padding:8px 16px; min-height:48px; align-items:center; font-size:17px; border-bottom:0.5px solid var(--material-border); }
-  .wordlist div:last-child{ border-bottom:none; }
+  .wordlist > div{ display:flex; justify-content:space-between; gap:16px; padding:8px 16px; min-height:48px; align-items:center; font-size:17px; border-bottom:0.5px solid var(--material-border); }
+  .wordlist > div:last-child{ border-bottom:none; }
+
+  .stat:active{ transform:scale(0.96); }
+  .stat:focus-visible{ outline:none; box-shadow:var(--focus); }
+  .stat i{ display:block; font-style:normal; font-size:13px; font-weight:600; color:var(--link); }
+
+  /* pickers (word lists, number of words) */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  button.pick{ background:var(--fill); color:var(--ink); box-shadow:none; padding:0 16px; min-width:48px; font-size:15px; font-weight:600; }
+  button.pick.on{ background:var(--ink); color:var(--on-ink); }
+  .wordlist.sets{ max-height:none; margin-top:16px; }
+  .wordlist.sets:empty{ display:none; }
+  .wordlist .info{ display:flex; flex-direction:column; min-width:0; }
+  .wordlist .info small{ font-size:13px; color:var(--ink2); }
+  .wordlist .acts{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .wordlist .zi{ font-family:var(--kai); font-size:28px; font-weight:600; line-height:1.2; }
+  .wordlist .tags{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+
+  /* word list sheet */
+  .sheet-bg{ position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.32); display:flex; align-items:center; justify-content:center; padding:24px; }
+  .sheet{ width:100%; max-width:560px; max-height:80dvh; display:flex; flex-direction:column; margin:0; animation:pop 300ms var(--spring); }
+  .sheet .greeting{ margin-bottom:16px; }
+  .sheet .wordlist{ max-height:none; flex:1; }
+  .sheet .note{ margin:0; }
 
   /* session */
   .stage{ text-align:center; padding:16px 24px; min-height:calc(100dvh - 184px);
@@ -239,31 +262,33 @@
         <button class="small grey" id="logoutBtn">Log out</button>
       </div>
       <div class="stats">
-        <div class="stat"><b id="stTotal">0</b><span>Words</span></div>
-        <div class="stat"><b id="stNew">0</b><span>New</span></div>
-        <div class="stat l"><b id="stLearn">0</b><span>Learning</span></div>
-        <div class="stat m"><b id="stMaster">0</b><span>Mastered</span></div>
+        <div class="stat" data-filter="all" role="button" tabindex="0"><b id="stTotal">0</b><span>Words</span><i>View</i></div>
+        <div class="stat" data-filter="new" role="button" tabindex="0"><b id="stNew">0</b><span>New</span><i>View</i></div>
+        <div class="stat l" data-filter="learning" role="button" tabindex="0"><b id="stLearn">0</b><span>Learning</span><i>View</i></div>
+        <div class="stat m" data-filter="mastered" role="button" tabindex="0"><b id="stMaster">0</b><span>Mastered</span><i>View</i></div>
       </div>
       <div class="bar"><div id="masterBar"></div></div>
+      <div id="pickers">
+        <div class="label">How many words today?</div>
+        <div class="chips" id="pickChips"></div>
+      </div>
       <div class="gap"></div>
       <button class="big" id="startBtn">Start reading</button>
       <div class="msg" id="homeMsg"></div>
     </div>
 
     <div class="panel">
-      <h2>Word list</h2>
-      <p class="note">Upload an Excel file (.xlsx / .csv). Column A = word, B = pinyin (optional), C = meaning (optional).</p>
-      <div class="row">
+      <h2>Word lists</h2>
+      <p class="note">Upload an Excel file (.xlsx / .csv). Column A = word, B = pinyin (optional), C = meaning (optional). Each upload becomes its own list, which you can name and rename.</p>
+      <label for="setNameIn">Name for the new list</label>
+      <input id="setNameIn" type="text" autocomplete="off" placeholder="e.g. Book 2B (blank = use the file name)">
+      <div class="row" style="margin-top:16px">
         <button class="grey" id="uploadBtn">Upload Excel</button>
         <button class="grey" id="tplBtn">Download template</button>
         <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" class="hidden">
       </div>
-      <label class="check"><input type="checkbox" id="replaceChk"> Replace the existing list (otherwise new words are added)</label>
       <div class="msg" id="uploadMsg"></div>
-      <details>
-        <summary>Show words &amp; status</summary>
-        <div class="wordlist" id="wordList"></div>
-      </details>
+      <div class="wordlist sets" id="setList"></div>
     </div>
 
     <div class="panel">
@@ -273,6 +298,17 @@
         <button class="grey" id="resetBtn">Reset progress</button>
       </div>
       <div class="msg" id="micMsg"></div>
+    </div>
+  </div>
+
+  <!-- WORD LIST SHEET -->
+  <div class="sheet-bg hidden" id="sheetBg">
+    <div class="panel sheet" role="dialog" aria-modal="true">
+      <div class="greeting">
+        <div><h2 id="sheetTitle"></h2><p class="note" id="sheetNote"></p></div>
+        <button class="small grey" id="sheetClose">Done</button>
+      </div>
+      <div class="wordlist" id="sheetList"></div>
     </div>
   </div>
 
@@ -326,8 +362,9 @@
 const TIME_LIMIT = 20;      // seconds to read a word
 const MASTERY = 3;          // correct first-try reads in a row to master a word
 const HARD_MISSES = 3;      // a word missed this many times is "hard": needs one extra correct read, and comes back twice as often
-const SESSION_MAX = 20;     // words per session (first attempts)
-const NEW_MIN = 5;          // room kept for new words even when many are due for review
+const COUNT_CHOICES = [20, 40, 60, 80];          // "how many words today": a mix drawn from every list
+const COUNT_DEFAULT = 20;
+const DEFAULT_SET = 'My words';                 // name for words uploaded before lists existed
 const RETRY_GAP = 3;        // a missed word comes back after this many other words in the same session
 const RETRY_MAX = 2;        // ...at most this many times per session
 // days until a word is tested again, by how many times in a row it has been read correctly
@@ -497,28 +534,108 @@ function schedule(p){
 }
 const statusOf = w => { const p = profile.progress[w]; return !p || !p.attempts ? 'new' : p.mastered ? 'mastered' : 'learning'; };
 
-function renderHome(){
-  show('home');
+/* word lists ("sets") and what the child chose to practise */
+const setOf = o => o.s || DEFAULT_SET;
+function setNames(){ const n = []; profile.words.forEach(o=>{ const s = setOf(o); if(!n.includes(s)) n.push(s); }); return n; }
+const wordsIn = name => profile.words.filter(o => setOf(o)===name);
+// today's choice: {set:'Book 1A'} = every word of that list, otherwise {n:20} = a mix of n words from all lists
+function choice(){
+  const pf = profile.prefs || (profile.prefs = {});
+  if(pf.set && !setNames().includes(pf.set)) pf.set = null;
+  if(!pf.set && !COUNT_CHOICES.includes(pf.n)) pf.n = COUNT_DEFAULT;
+  return pf;
+}
+
+function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+
+function renderHome(){ show('home'); refreshHome(); }
+function refreshHome(){
   $('hello').textContent = 'Hi ' + profile.name + '! 👋';
-  const total = profile.words.length;
+  const pf = choice(), names = setNames(), words = profile.words;
+  const total = words.length;
   const c = {new:0, learning:0, mastered:0};
-  profile.words.forEach(o => c[statusOf(o.w)]++);
+  words.forEach(o => c[statusOf(o.w)]++);
   $('stTotal').textContent = total; $('stNew').textContent = c.new;
   $('stLearn').textContent = c.learning; $('stMaster').textContent = c.mastered;
   $('masterBar').style.width = (total ? c.mastered/total*100 : 0) + '%';
-  const nDue = total ? dueWords().length : 0;
+
+  // one choice: a number of mixed words, or all of one list
+  $('pickers').classList.toggle('hidden', !total);
+  const pick = (label, on, fn) => { const b = el('button', 'pick' + (on ? ' on' : ''), label); b.onclick = fn; return b; };
+  const pc = $('pickChips'); pc.innerHTML = '';
+  COUNT_CHOICES.forEach(n => pc.appendChild(pick(String(n), !pf.set && pf.n===n, ()=>{ pf.set = null; pf.n = n; saveProfile(); refreshHome(); })));
+  names.forEach(name => pc.appendChild(pick('All of ' + name + ' (' + wordsIn(name).length + ')', pf.set===name, ()=>{ pf.set = name; saveProfile(); refreshHome(); })));
+
+  const nDue = total ? dueWords(words).length : 0;
   $('homeMsg').textContent = !total ? 'Upload a word list to begin.'
-    : (nDue || c.new) ? nDue + ' to review today · ' + c.new + ' new' : 'Nothing due today – you can still practise.';
+    : pf.set ? 'Every word in ' + pf.set + ', in random order.'
+    : Math.min(pf.n, total) + ' words mixed from ' + (names.length > 1 ? 'all ' + names.length + ' lists' : 'your list') + ' · missed words come first (' + nDue + ' to review, ' + c.new + ' new).';
   $('startBtn').disabled = !total;
-  const list = $('wordList'); list.innerHTML = '';
-  profile.words.forEach(o=>{
-    const s = statusOf(o.w), d = document.createElement('div');
-    d.innerHTML = '<span></span><span class="tag ' + s + '">' + s + '</span>';
-    const p = profile.progress[o.w];
-    d.firstChild.textContent = o.w + (o.p ? '  ' + o.p : '') + (o.m ? '  – ' + o.m : '') + (p && p.wrong ? '  · missed ' + p.wrong + '×' : '');
-    list.appendChild(d);
+
+  // the lists themselves
+  const list = $('setList'); list.innerHTML = '';
+  names.forEach(n=>{
+    const ws = profile.words.filter(o => setOf(o)===n);
+    const done = ws.filter(o => statusOf(o.w)==='mastered').length;
+    const row = el('div'), info = el('span', 'info'), acts = el('span', 'acts');
+    info.appendChild(el('span', null, n));
+    info.appendChild(el('small', null, ws.length + ' words · ' + done + ' mastered'));
+    const btn = (t, fn) => { const b = el('button', 'small grey', t); b.onclick = fn; acts.appendChild(b); };
+    btn('View', ()=> openSheet(n, ws));
+    btn('Rename', ()=> renameSet(n));
+    btn('Delete', ()=> deleteSet(n, ws.length));
+    row.appendChild(info); row.appendChild(acts); list.appendChild(row);
   });
 }
+
+function renameSet(old){
+  const name = (prompt('New name for "' + old + '":', old) || '').trim();
+  if(!name || name === old) return;
+  if(setNames().includes(name) && !confirm('"' + name + '" already exists. Merge the two lists?')) return;
+  profile.words.forEach(o => { if(setOf(o)===old) o.s = name; });
+  if(profile.prefs && profile.prefs.set === old) profile.prefs.set = name;
+  saveProfile(true); refreshHome();
+}
+function deleteSet(name, count){
+  if(!confirm('Delete "' + name + '" and its ' + count + ' words? Their progress is deleted too.')) return;
+  profile.words = profile.words.filter(o => { if(setOf(o)!==name) return true; delete profile.progress[o.w]; return false; });
+  saveProfile(true); refreshHome();
+}
+
+/* ---------- word list sheet (tap a dashboard number, or "View" on a list) ---------- */
+const FILTER_TITLE = {all:'All words', new:'New words', learning:'Still learning', mastered:'Mastered'};
+function openSheet(title, words, note){
+  $('sheetTitle').textContent = title;
+  $('sheetNote').textContent = (note ? note + ' · ' : '') + words.length + (words.length===1 ? ' word' : ' words');
+  const list = $('sheetList'); list.innerHTML = '';
+  const many = setNames().length > 1;
+  words.forEach(o=>{
+    const st = statusOf(o.w), p = profile.progress[o.w];
+    const row = el('div'), info = el('span', 'info'), tags = el('span', 'tags');
+    info.appendChild(el('span', 'zi', o.w));
+    const sub = [o.p, o.m].filter(Boolean).join(' · ');
+    if(sub) info.appendChild(el('small', null, sub));
+    if(p && p.wrong) tags.appendChild(el('span', 'tag', 'missed ' + p.wrong + '×'));
+    if(many) tags.appendChild(el('span', 'tag', setOf(o)));
+    tags.appendChild(el('span', 'tag ' + st, st));
+    row.appendChild(info); row.appendChild(tags); list.appendChild(row);
+  });
+  if(!words.length) list.appendChild(el('div', null, 'No words here yet.'));
+  $('sheetBg').classList.remove('hidden');
+  list.scrollTop = 0;
+}
+function closeSheet(){ $('sheetBg').classList.add('hidden'); }
+$('sheetClose').onclick = closeSheet;
+$('sheetBg').onclick = e => { if(e.target === $('sheetBg')) closeSheet(); };
+document.querySelectorAll('.stat[data-filter]').forEach(t=>{
+  const open = ()=>{
+    if(!profile) return;
+    const f = t.dataset.filter, words = profile.words.filter(o => f==='all' || statusOf(o.w)===f);
+    openSheet(FILTER_TITLE[f], words, setNames().length > 1 ? 'All lists' : '');
+  };
+  t.onclick = open;
+  t.onkeydown = e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
+});
 
 /* ---------- Excel upload ---------- */
 $('uploadBtn').onclick = ()=> $('fileIn').click();
@@ -539,21 +656,17 @@ $('fileIn').onchange = async e=>{
       out.push({w, p:String(r[1]||'').trim(), m:String(r[2]||'').trim()});
     });
     if(!out.length) throw new Error('No words found in column A.');
-    let added = 0;
-    if($('replaceChk').checked){
-      const keep = {};
-      out.forEach(o=>{ if(profile.progress[o.w]) keep[o.w] = profile.progress[o.w]; });
-      profile.words = out; profile.progress = keep; added = out.length;
-    }else{
-      const have = new Map(profile.words.map(o=>[o.w,o]));
-      out.forEach(o=>{
-        if(have.has(o.w)){ const x = have.get(o.w); x.p = o.p || x.p; x.m = o.m || x.m; }
-        else{ profile.words.push(o); added++; }
-      });
-    }
-    saveProfile(true); renderHome();
-    $('uploadMsg').className = 'msg ok';
-    $('uploadMsg').textContent = '✓ ' + out.length + ' words read, ' + added + ' ' + ($('replaceChk').checked ? 'in list.' : 'new.');
+    const setName = $('setNameIn').value.trim() || f.name.replace(/\.[^.]+$/, '') || DEFAULT_SET;
+    const have = new Map(profile.words.map(o=>[o.w,o]));
+    let added = 0, dup = 0;
+    out.forEach(o=>{
+      if(have.has(o.w)){ const x = have.get(o.w); x.p = o.p || x.p; x.m = o.m || x.m; dup++; }   // a word lives in one list only
+      else{ o.s = setName; profile.words.push(o); added++; }
+    });
+    $('setNameIn').value = '';
+    saveProfile(true); refreshHome();
+    msg.classList.add('ok');
+    msg.textContent = '✓ ' + added + ' words added to "' + setName + '"' + (dup ? ' · ' + dup + ' were already in your lists and stayed where they were' : '') + '.';
   }catch(err){
     msg.classList.add('err'); msg.textContent = 'Could not read file: ' + err.message;
   }
@@ -566,7 +679,7 @@ $('tplBtn').onclick = ()=>{
 };
 $('resetBtn').onclick = ()=>{
   if(confirm('Reset ALL progress for ' + profile.name + '? The word list is kept.')){
-    profile.progress = {}; saveProfile(true); renderHome();
+    profile.progress = {}; saveProfile(true); refreshHome();
   }
 };
 
@@ -668,26 +781,30 @@ function unlockSpeech(){
 let sess = null;
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
 
-function dueWords(){
+const errorRate = p => p.wrong / Math.max(1, p.attempts);
+function dueWords(words){
   const now = Date.now();
-  const rate = p => p.wrong / Math.max(1, p.attempts);
-  return shuffle(profile.words.filter(o => prog(o.w).attempts && dueAt(prog(o.w)) <= now))
-    .sort((a,b)=>{ const x = prog(a.w), y = prog(b.w); return (x.streak - y.streak) || (rate(y) - rate(x)); });   // weakest first
+  return shuffle(words.filter(o => prog(o.w).attempts && dueAt(prog(o.w)) <= now))
+    .sort((a,b)=>{ const x = prog(a.w), y = prog(b.w); return (x.streak - y.streak) || (errorRate(y) - errorRate(x)); });   // weakest first
 }
-function buildQueue(){
-  const due = dueWords();
-  const fresh = shuffle(profile.words.filter(o => !prog(o.w).attempts));
-  let q = due.slice(0, SESSION_MAX - Math.min(fresh.length, NEW_MIN));
-  q = q.concat(fresh.slice(0, SESSION_MAX - q.length));
-  if(!q.length){   // nothing due and nothing new: free practice on the weakest words
-    const rate = p => p.wrong / Math.max(1, p.attempts);
-    q = shuffle(profile.words.slice()).sort((a,b)=> rate(prog(b.w)) - rate(prog(a.w))).slice(0, 10);
+// a mix of n words from every list: missed and due words first, then new words (about a quarter is
+// kept for them), then topped up at random with words not due yet so the child gets the number asked for
+function buildQueue(words, n){
+  const due = dueWords(words);
+  const fresh = shuffle(words.filter(o => !prog(o.w).attempts));
+  let q = due.slice(0, n - Math.min(fresh.length, Math.max(1, Math.round(n/4))));
+  q = q.concat(fresh.slice(0, n - q.length));
+  if(q.length < n){
+    const used = new Set(q);
+    q = q.concat(shuffle(words.filter(o => !used.has(o))).slice(0, n - q.length));
   }
   return shuffle(q).map(o => ({o, retry:0}));
 }
 
 $('startBtn').onclick = ()=>{
-  const q = buildQueue(); if(!q.length) return;
+  const pf = choice();
+  const q = pf.set ? shuffle(wordsIn(pf.set)).map(o => ({o, retry:0})) : buildQueue(profile.words, pf.n);
+  if(!q.length) return;
   sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
   micBlocked = false;
   unlockSpeech();
