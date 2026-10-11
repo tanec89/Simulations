@@ -364,18 +364,13 @@
 'use strict';
 
 /* ---------- constants ---------- */
-const APP_VERSION = '6';    // shown on screen so you can tell which version a device has loaded; bump on every release
+const APP_VERSION = '7';    // shown on screen so you can tell which version a device has loaded; bump on every release
 const TIME_LIMIT = 20;      // seconds to read a word
-const MASTERY = 3;          // correct first-try reads in a row to master a word
-const HARD_MISSES = 3;      // a word missed this many times is "hard": needs one extra correct read, and comes back twice as often
 const COUNT_CHOICES = [20, 40, 60, 80];          // "how many words today": a mix drawn from every list
 const COUNT_DEFAULT = 20;
 const DEFAULT_SET = 'My words';                 // name for words uploaded before lists existed
 const RETRY_GAP = 3;        // a missed word comes back after this many other words in the same session
 const RETRY_MAX = 2;        // ...at most this many times per session
-// days until a word is tested again, by how many times in a row it has been read correctly
-const INTERVAL_DAYS = [0, 0, 1, 3, 7, 14, 30];
-const DAY = 864e5;
 const COL = 'flashcardProfiles';
 
 const $ = id => document.getElementById(id);
@@ -529,16 +524,9 @@ if(auth) auth.onAuthStateChanged(async user=>{
 
 /* ---------- home ---------- */
 const prog = w => profile.progress[w] || (profile.progress[w] = {streak:0, attempts:0, right:0, wrong:0, last:0, mastered:false});
-const isHard = p => p.wrong >= HARD_MISSES;
-const needed = p => MASTERY + (isHard(p) ? 1 : 0);
-// when a word should next be tested (older saved data has no "due": derive it)
-const dueAt = p => p.due != null ? p.due : (p.mastered ? p.last + 7*DAY : 0);
-function schedule(p){
-  let days = INTERVAL_DAYS[Math.min(p.streak, INTERVAL_DAYS.length-1)];
-  if(isHard(p)) days = days/2;
-  p.due = days ? Date.now() + days*DAY - DAY/4 : 0;   // 6h slack so "tomorrow" works at any time of day
-}
-const statusOf = w => { const p = profile.progress[w]; return !p || !p.attempts ? 'new' : p.mastered ? 'mastered' : 'learning'; };
+// new = never read · mastered = read correctly the last time it was tested · learning = read wrongly the last time
+const statusOf = w => { const p = profile.progress[w]; return !p || !p.attempts ? 'new' : p.streak > 0 ? 'mastered' : 'learning'; };
+const learningWords = () => profile.words.filter(o => statusOf(o.w) === 'learning');
 
 /* word lists ("sets") and what the child chose to practise */
 const setOf = o => o.s || DEFAULT_SET;
@@ -548,7 +536,8 @@ const wordsIn = name => profile.words.filter(o => setOf(o)===name);
 function choice(){
   const pf = profile.prefs || (profile.prefs = {});
   if(pf.set && !setNames().includes(pf.set)) pf.set = null;
-  if(!pf.set && !COUNT_CHOICES.includes(pf.n)) pf.n = COUNT_DEFAULT;
+  if(pf.learn && !learningWords().length) pf.learn = false;
+  if(!COUNT_CHOICES.includes(pf.n)) pf.n = COUNT_DEFAULT;
   return pf;
 }
 
@@ -569,13 +558,14 @@ function refreshHome(){
   $('pickers').classList.toggle('hidden', !total);
   const pick = (label, on, fn) => { const b = el('button', 'pick' + (on ? ' on' : ''), label); b.onclick = fn; return b; };
   const pc = $('pickChips'); pc.innerHTML = '';
-  COUNT_CHOICES.forEach(n => pc.appendChild(pick(String(n), !pf.set && pf.n===n, ()=>{ pf.set = null; pf.n = n; saveProfile(); refreshHome(); })));
-  names.forEach(name => pc.appendChild(pick('All of ' + name + ' (' + wordsIn(name).length + ')', pf.set===name, ()=>{ pf.set = name; saveProfile(); refreshHome(); })));
+  COUNT_CHOICES.forEach(n => pc.appendChild(pick(String(n), !pf.set && !pf.learn && pf.n===n, ()=>{ pf.set = null; pf.learn = false; pf.n = n; saveProfile(); refreshHome(); })));
+  names.forEach(name => pc.appendChild(pick('All of ' + name + ' (' + wordsIn(name).length + ')', !pf.learn && pf.set===name, ()=>{ pf.learn = false; pf.set = name; saveProfile(); refreshHome(); })));
+  if(c.learning) pc.appendChild(pick('Learning words (' + c.learning + ')', !!pf.learn, ()=>{ pf.learn = true; saveProfile(); refreshHome(); }));
 
-  const nDue = total ? dueWords(words).length : 0;
   $('homeMsg').textContent = !total ? 'Upload a word list to begin.'
+    : pf.learn ? 'The ' + c.learning + ' words read wrongly before. Read one correctly and it moves to Mastered.'
     : pf.set ? 'Every word in ' + pf.set + ', in random order.'
-    : Math.min(pf.n, total) + ' words mixed from ' + (names.length > 1 ? 'all ' + names.length + ' lists' : 'your list') + ' · missed words come first (' + nDue + ' to review, ' + c.new + ' new).';
+    : Math.min(pf.n, total) + ' words mixed from ' + (names.length > 1 ? 'all ' + names.length + ' lists' : 'your list') + ' · learning words come first (' + c.learning + ' learning, ' + c.new + ' new).';
   $('startBtn').disabled = !total;
 
   // the lists themselves
@@ -849,18 +839,12 @@ function speak(texts, cb, maxMs){
 let sess = null;
 const shuffle = a => { for(let i=a.length-1;i>0;i--){ const j=Math.random()*(i+1)|0; [a[i],a[j]]=[a[j],a[i]]; } return a; };
 
-const errorRate = p => p.wrong / Math.max(1, p.attempts);
-function dueWords(words){
-  const now = Date.now();
-  return shuffle(words.filter(o => prog(o.w).attempts && dueAt(prog(o.w)) <= now))
-    .sort((a,b)=>{ const x = prog(a.w), y = prog(b.w); return (x.streak - y.streak) || (errorRate(y) - errorRate(x)); });   // weakest first
-}
-// a mix of n words from every list: missed and due words first, then new words (about a quarter is
-// kept for them), then topped up at random with words not due yet so the child gets the number asked for
+// a mix of n words from every list: learning words first (most-missed first), then new words (about a
+// quarter is kept for them), then topped up at random with mastered words so the child gets the number asked for
 function buildQueue(words, n){
-  const due = dueWords(words);
-  const fresh = shuffle(words.filter(o => !prog(o.w).attempts));
-  let q = due.slice(0, n - Math.min(fresh.length, Math.max(1, Math.round(n/4))));
+  const learning = shuffle(words.filter(o => statusOf(o.w) === 'learning')).sort((a,b)=> prog(b.w).wrong - prog(a.w).wrong);
+  const fresh = shuffle(words.filter(o => statusOf(o.w) === 'new'));
+  let q = learning.slice(0, n - Math.min(fresh.length, Math.max(1, Math.round(n/4))));
   q = q.concat(fresh.slice(0, n - q.length));
   if(q.length < n){
     const used = new Set(q);
@@ -871,7 +855,8 @@ function buildQueue(words, n){
 
 $('startBtn').onclick = ()=>{
   const pf = choice();
-  const q = pf.set ? shuffle(wordsIn(pf.set)).map(o => ({o, retry:0})) : buildQueue(profile.words, pf.n);
+  const q = pf.learn ? shuffle(learningWords()).map(o => ({o, retry:0}))
+          : pf.set ? shuffle(wordsIn(pf.set)).map(o => ({o, retry:0})) : buildQueue(profile.words, pf.n);
   if(!q.length) return;
   sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
   micBlocked = false;
@@ -932,11 +917,11 @@ function nextWord(){
 function record(correct){
   const o = sess.cur, p = prog(o.w), item = sess.item;
   p.last = Date.now();
-  if(!item.retry){   // only the first read of a word in a session counts towards mastery
+  if(!item.retry){   // only the first read of a word in a session decides Mastered or Learning
     p.attempts++;
-    if(correct){ p.right++; p.streak++; if(p.streak >= needed(p)) p.mastered = true; }
-    else{ p.wrong++; p.streak = 0; p.mastered = false; }
-    schedule(p);
+    if(correct){ p.right++; p.streak++; }    // read correctly: Mastered
+    else{ p.wrong++; p.streak = 0; }         // read wrongly: Learning
+    p.mastered = correct;
     sess.results.push({o, ok:correct});
   }
   // missed: bring it back a few words later in this session
@@ -1022,7 +1007,7 @@ function finish(){ endSession(false); }
 
 function summary(){
   const res = sess.results, ok = res.filter(r=>r.ok).length, bad = res.filter(r=>!r.ok);
-  const mastered = profile.words.filter(o=>prog(o.w).mastered).length;
+  const mastered = profile.words.filter(o => statusOf(o.w) === 'mastered').length;
   $('sumEmoji').textContent = bad.length===0 ? '🏆' : ok >= bad.length ? '🌟' : '💪';
   $('sumTitle').textContent = bad.length===0 ? 'Perfect! 太棒了！' : 'Well done! 做得好！';
   $('sumLine').textContent = ok + ' of ' + res.length + ' read correctly on the first try. Mastered so far: ' + mastered + ' / ' + profile.words.length + '.';
