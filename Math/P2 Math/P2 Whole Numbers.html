@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>P2 Whole Numbers: Number Bomber</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2a41; font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; color: #1b2a41; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  #app { position: relative; height: 100%; max-width: 1366px; margin: 0 auto; display: flex; flex-direction: column; }
+
+  /* ---------- mission card ---------- */
+  .dialog { background: #fff; border: 4px solid #1b2a41; border-radius: 12px; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 6px #7fb2e5; padding: 10px 16px; font-size: clamp(16px, 2.6vw, 24px); font-weight: 700; line-height: 1.25; }
+  #mission { flex: none; margin: 8px 8px 0; text-align: center; display: flex; align-items: center; justify-content: center; gap: 12px; min-height: 72px; }
+  #mText b { color: #c0392b; white-space: nowrap; }
+  #sayBtn { flex: none; border: 3px solid #1b2a41; background: #ffe066; border-radius: 10px; font-size: 20px; padding: 2px 8px; cursor: pointer; }
+  .blocks { display: inline-flex; gap: 4px; align-items: flex-end; vertical-align: middle; margin-left: 10px; }
+  .rod { width: 10px; height: 47px; border: 1px solid #1b2a41; background: repeating-linear-gradient(#3b82f6 0 8%, #1b2a41 8% 10%); }
+  .sq { width: 38px; height: 38px; border: 1px solid #1b2a41; background: repeating-linear-gradient(rgba(27,42,65,.4) 0 1px, transparent 1px 10%), repeating-linear-gradient(90deg, rgba(27,42,65,.4) 0 1px, transparent 1px 10%), #2ecc71; }
+  .ones { display: grid; grid-template-rows: repeat(5, 8px); grid-auto-flow: column; gap: 1px; margin-left: 8px; }
+  .ones i { width: 8px; height: 8px; background: #ff9f1c; border: 1px solid #1b2a41; }
+  .blocks.sm .rod { width: 8px; height: 38px; }
+  .blocks.sm .ones { grid-template-rows: repeat(5, 6.5px); }
+  .blocks.sm .ones i { width: 6.5px; height: 6.5px; }
+  .line { display: inline-block; font-size: 1.15em; letter-spacing: 3px; vertical-align: middle; margin-left: 6px; white-space: nowrap; }
+  #toast { position: absolute; left: 8px; right: 8px; bottom: 8px; display: none; z-index: 3; text-align: center; font-size: clamp(15px, 2.3vw, 21px); padding: 8px 12px; }
+  #toast.show { display: block; } #toast.bad { background: #ffe3e0; } #toast.good { background: #d8f5df; } #toast.info { background: #fff7d6; }
+
+  /* ---------- play area ---------- */
+  #play { flex: 1; min-height: 0; display: flex; gap: 8px; padding: 8px; }
+  #stage { flex: 1; min-width: 0; position: relative; touch-action: none; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; image-rendering: pixelated; }
+  #left, #right { flex: none; display: flex; flex-direction: column; justify-content: space-between; gap: 8px; }
+  #left { width: 170px; align-items: flex-start; }
+  #right { width: 130px; align-items: flex-end; }
+  #stats { display: flex; flex-direction: column; gap: 6px; }
+  .panel { background: #f4ecd8; border: 3px solid #1b2a41; border-radius: 10px; padding: 5px 10px; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
+  .panel h3 { margin: 0 0 2px; font: 9px 'Press Start 2P', monospace; color: #c0392b; }
+  #hearts { font-size: 24px; line-height: 1.1; letter-spacing: 2px; white-space: nowrap; }
+  #keys, #power { font-size: 19px; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+  #tools { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+  .tool { border: 3px solid #1b2a41; background: #fff; border-radius: 10px; font: 700 20px 'Baloo 2', sans-serif; color: #1b2a41; padding: 4px 12px; cursor: pointer; box-shadow: 0 3px 0 rgba(0,0,0,.3); }
+  #stageName { color: #cfe0f5; font-size: 14px; font-weight: 700; text-align: right; line-height: 1.2; }
+
+  #dpad { position: relative; width: 170px; height: 170px; flex: none; touch-action: none; border-radius: 50%; background: rgba(255,255,255,.12); border: 3px solid rgba(255,255,255,.35); }
+  #dpad i { position: absolute; width: 54px; height: 54px; display: grid; place-items: center; background: #fff; border: 3px solid #1b2a41; border-radius: 12px; font: normal 22px sans-serif; color: #1b2a41; pointer-events: none; }
+  #dpad i.on { background: #ffc93c; }
+  #dpad .up { left: 55px; top: 2px; } #dpad .down { left: 55px; bottom: 2px; } #dpad .left { left: 2px; top: 55px; } #dpad .right { right: 2px; top: 55px; }
+  #bombBtn { width: 120px; height: 120px; flex: none; border-radius: 50%; border: 4px solid #1b2a41; background: #e74c3c; box-shadow: 0 6px 0 #1b2a41; font-size: 52px; line-height: 1; cursor: pointer; touch-action: none; padding: 0; }
+  #bombBtn.down { transform: translateY(4px); box-shadow: 0 2px 0 #1b2a41; background: #ff7b6b; }
+
+  @media (orientation: portrait) {
+    #play { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    #stage { grid-area: 1 / 1 / 2 / 3; aspect-ratio: 832 / 704; max-height: calc(100vh - 300px); width: 100%; }
+    #left { grid-area: 2 / 1; width: auto; flex-direction: row; justify-content: flex-start; align-items: flex-start; }
+    #right { grid-area: 2 / 2; width: auto; flex-direction: row; justify-content: flex-end; align-items: flex-start; }
+    #dpad { order: -1; }
+  }
+
+  /* ---------- overlays ---------- */
+  .overlay { position: absolute; inset: 0; display: none; z-index: 10; overflow-y: auto; touch-action: pan-y; }
+  .overlay.show { display: block; }
+  .center { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; text-align: center; }
+  #title { background: linear-gradient(180deg, #7fd0ff, #bfe9ff 55%, #7ec850 55%, #5fae3c); }
+  #over, #clear, #pause { background: rgba(27,42,65,.86); }
+  .overlay h1 { margin: 0; font: 400 clamp(20px, 4.4vw, 36px)/1.4 'Press Start 2P', monospace; color: #fff; text-shadow: 3px 3px 0 #1b2a41, -2px -2px 0 #1b2a41, 2px -2px 0 #1b2a41, -2px 2px 0 #1b2a41; }
+  .hero { font-size: 48px; line-height: 1; }
+  .card { background: #fff; border: 4px solid #1b2a41; border-radius: 14px; padding: 10px 16px; max-width: 600px; font-size: 18px; font-weight: 600; line-height: 1.35; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .opt { font: 800 18px 'Baloo 2', sans-serif; padding: 5px 12px; border-radius: 14px; border: 4px solid #1b2a41; background: #fff; color: #1b2a41; cursor: pointer; line-height: 1.15; min-width: 96px; }
+  .opt small { display: block; font-size: 13px; font-weight: 600; }
+  .opt.sel { background: #ffc93c; }
+  .opt:disabled { opacity: .55; cursor: default; }
+  .opt .dot { display: block; width: 30px; height: 30px; margin: 2px auto; border-radius: 50%; border: 3px solid #1b2a41; }
+  .btn { font: 400 16px 'Press Start 2P', monospace; padding: 14px 24px; border: 4px solid #1b2a41; border-radius: 14px; background: #2ecc71; color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.3); box-shadow: 0 5px 0 #1b2a41; cursor: pointer; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #1b2a41; }
+  .btn.alt { background: #3b82f6; font-size: 13px; padding: 12px 18px; }
+  a.menu { color: #1b2a41; font-weight: 700; font-size: 16px; }
+  #stars { font-size: 54px; letter-spacing: 6px; }
+  #ver { color: #1b2a41; font-size: 12px; font-weight: 700; opacity: .7; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="mission" class="dialog"><span id="mText"></span><button id="sayBtn" title="Read it to me">🗣️</button></div>
+  <div id="play">
+    <div id="left">
+      <div id="stats">
+        <div class="panel"><h3>HEARTS</h3><div id="hearts"></div></div>
+        <div class="panel"><h3 id="keysTitle">KEYS</h3><div id="keys"></div></div>
+        <div class="panel"><h3>POWER</h3><div id="power"></div></div>
+      </div>
+      <div id="dpad"><i class="up">▲</i><i class="left">◀</i><i class="right">▶</i><i class="down">▼</i></div>
+    </div>
+    <div id="stage"><canvas id="cv" width="832" height="704"></canvas><div id="toast" class="dialog"></div></div>
+    <div id="right">
+      <div id="tools">
+        <button class="tool" id="pauseBtn" title="Pause">⏸</button>
+        <div id="stageName"></div>
+      </div>
+      <button id="bombBtn" title="Place a bomb">💣</button>
+    </div>
+  </div>
+
+  <div id="title" class="overlay show"><div class="center">
+    <div class="hero">💣🔢</div>
+    <h1>NUMBER BOMBER</h1>
+    <div class="row" id="levels">
+      <button class="opt" data-lv="easy">Easy<small>Numbers to 100</small></button>
+      <button class="opt" data-lv="mid">Intermediate<small>Numbers to 1000</small></button>
+      <button class="opt" data-lv="hard">Challenging<small>Tricky numbers to 1000</small></button>
+    </div>
+    <div class="row" id="stages"></div>
+    <div class="row" id="heroes"></div>
+    <button class="btn" id="startBtn">START</button>
+    <div class="card">Read the mission, then blast the yellow crate with the right number to win a key. Collect all the keys to open the door. Watch out for monsters!</div>
+    <a class="menu" href="../../index.html">← All simulations</a>
+    <span id="ver"></span>
+  </div></div>
+
+  <div id="pause" class="overlay"><div class="center">
+    <h1>PAUSED</h1>
+    <button class="btn" id="resumeBtn">RESUME</button>
+    <div class="row">
+      <button class="btn alt" id="muteBtn">SOUND: ON</button>
+      <button class="btn alt" id="restartBtn">RESTART STAGE</button>
+      <button class="btn alt" id="quitBtn">MENU</button>
+    </div>
+  </div></div>
+
+  <div id="over" class="overlay"><div class="center">
+    <h1>OH NO!</h1>
+    <div class="card">You ran out of hearts. Have another go!</div>
+    <button class="btn" id="againBtn">TRY AGAIN</button>
+    <button class="btn alt" id="overMenuBtn">MENU</button>
+  </div></div>
+
+  <div id="clear" class="overlay"><div class="center">
+    <h1 id="clearTitle">STAGE CLEAR!</h1>
+    <div id="stars"></div>
+    <div class="card" id="clearStats"></div>
+    <button class="btn" id="nextBtn">NEXT STAGE</button>
+    <div class="row">
+      <button class="btn alt" id="replayBtn">PLAY AGAIN</button>
+      <button class="btn alt" id="clearMenuBtn">MENU</button>
+    </div>
+  </div></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const APP_VERSION = 'v1.0';
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+$('ver').textContent = APP_VERSION;
+
+// ---------- saved progress ----------
+const LEVELS = ['easy', 'mid', 'hard'];
+const SAVE_KEY = 'number-bomber-v1';
+let save = { stars: { easy: [0, 0, 0, 0, 0], mid: [0, 0, 0, 0, 0], hard: [0, 0, 0, 0, 0] }, missed: { easy: [], mid: [], hard: [] }, hero: 0, tut: false };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.stars && s.missed) save = Object.assign(save, s); } catch (e) {}
+const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
+const totalStars = () => LEVELS.reduce((n, l) => n + save.stars[l].reduce((a, b) => a + b, 0), 0);
+
+// ---------- sound ----------
+let actx, muted = false;
+function audio() {
+  actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function beep(freq, dur = .09, type = 'square', vol = .04) {
+  if (muted) return;
+  try {
+    const a = audio(), o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.value = freq; g.gain.value = vol;
+    o.connect(g); g.connect(a.destination); o.start();
+    g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + dur); o.stop(a.currentTime + dur);
+  } catch (e) {}
+}
+function sfxBoom() {
+  if (muted) return;
+  try {
+    const a = audio(), n = Math.floor(a.sampleRate * .35), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    f.type = 'lowpass'; f.frequency.value = 900; g.gain.value = .3; s.buffer = buf;
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+  } catch (e) {}
+}
+const tune = (notes, type = 'square', vol = .04) => notes.forEach(([f, at], i) => setTimeout(() => beep(f, .12, type, vol), at === undefined ? i * 100 : at));
+const sfxPlace = () => beep(300, .08, 'triangle', .08);
+const sfxHurt = () => beep(160, .3, 'sawtooth', .06);
+const sfxGood = () => tune([[660], [880]]);
+const sfxStep = n => beep(520 + n * 110, .12, 'square', .04);
+const sfxBad = () => beep(200, .25, 'sawtooth', .05);
+const sfxKey = () => tune([[1000, 0], [1400, 80]], 'triangle', .07);
+const sfxPop = () => beep(700, .08, 'triangle', .06);
+const sfxPower = () => tune([[523], [659], [784], [1047]], 'triangle', .06);
+const sfxDoor = () => tune([[392], [523], [659]], 'triangle', .06);
+const sfxWin = () => tune([[523], [659], [784], [1047], [784], [1047]]);
+function speak(text) {
+  if (muted || !window.speechSynthesis) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = .9;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+const hush = () => { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} };
+
+// ---------- questions ----------
+let level = 'easy', stage = 0;
+const big = () => level !== 'easy';
+const HI = () => big() ? 1000 : 100;
+const D = n => [Math.floor(n / 100), Math.floor(n / 10) % 10, n % 10];
+const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+function words(n) {
+  if (n === 1000) return 'one thousand';
+  if (n >= 100) return ONES[Math.floor(n / 100)] + ' hundred' + (n % 100 ? ' and ' + words(n % 100) : '');
+  if (n < 20) return ONES[n];
+  return TENS[Math.floor(n / 10)] + (n % 10 ? '-' + ONES[n % 10] : '');
+}
+const unit = (v, s) => `${v} ${s}${v === 1 ? '' : 's'}`;
+const list = a => a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0];
+// "3 hundreds, 4 tens and 2 ones"; skipZero leaves out the empty places ("5 hundreds and 7 ones")
+function describe(n, skipZero) {
+  if (!big()) return list([unit(Math.floor(n / 10), 'ten'), unit(n % 10, 'one')]);
+  const [h, t, o] = D(n), parts = [[h, 'hundred'], [t, 'ten'], [o, 'one']].filter(p => !skipZero || p[0]);
+  return list(parts.map(p => unit(p[0], p[1])));
+}
+const plain = html => html.replace(/<[^>]+>/g, '');
+function rndNum() {
+  if (level === 'easy') return rnd(11, 99);
+  if (level === 'hard' && rnd(0, 9) < 6) { const h = rnd(1, 9), d = rnd(1, 9); return h * 100 + pick([d, d * 10]); }   // a zero in the tens or ones
+  return rnd(101, 999);
+}
+// the slips a child is most likely to make with n
+function mistakes(n) {
+  if (!big()) { const t = Math.floor(n / 10), o = n % 10; return [o * 10 + t, n + 10, n - 10, n + 1, n - 1, t + o]; }
+  const [h, t, o] = D(n), m = [h * 100 + o * 10 + t, t * 100 + h * 10 + o, o * 100 + t * 10 + h, n + 1, n - 1, n + 10, n - 10, n + 100, n - 100];
+  if (t === 0) m.push(h * 10 + o, h * 100 + o * 10);
+  if (o === 0) m.push(h * 100 + t, h * 10 + t);
+  return m;
+}
+// `count` wrong answers: the likely mistakes first, topped up with nearby numbers if there are too few
+function wrongs(ans, pool, ok = () => true, count = 3, avoid = []) {
+  const out = [], hi = HI(), fits = v => Number.isInteger(v) && v !== ans && v >= 1 && v <= hi && !out.includes(v) && !avoid.includes(v) && ok(v);
+  for (const v of shuffle([...pool])) if (out.length < count && fits(v)) out.push(v);
+  for (let i = 0; out.length < count && i < 400; i++) { const v = i < 200 ? ans + rnd(-30, 30) : rnd(1, hi); if (fits(v)) out.push(v); }
+  return out;
+}
+const one = (html, say, ans, wrong, hint) => ({ kind: 'one', html, say, hint, items: [{ label: ans, ok: true }, ...wrong.map(w => ({ label: w, ok: false }))] });
+function blocks(n) {
+  const [h, t, o] = D(n);
+  return `<span class="blocks${h ? ' sm' : ''}">${'<span class="sq"></span>'.repeat(h)}${'<span class="rod"></span>'.repeat(t)}<span class="ones">${'<i></i>'.repeat(o)}</span></span>`;
+}
+// a few numbers that are easy to mix up
+function numSet(k) {
+  const set = [], lo = big() ? 100 : 10, add = v => { if (v >= lo && v <= HI() && !set.includes(v) && set.length < k) set.push(v); };
+  if (level === 'hard') {
+    const [a, b, c] = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    for (const v of shuffle([a * 100 + b * 10 + c, a * 100 + c * 10 + b, b * 100 + a * 10 + c, b * 100 + c * 10 + a, c * 100 + a * 10 + b, c * 100 + b * 10 + a])) add(v);
+  } else { const n = rndNum(); add(n); for (const v of shuffle(mistakes(n))) add(v); }
+  for (let i = 0; set.length < k && i < 200; i++) add(rnd(lo, HI() - 1));
+  return set;
+}
+const cmpTip = () => big() ? 'Compare the hundreds first, then the tens, then the ones.' : 'Compare the tens first, then the ones.';
+const parityHint = w => `${w} ends in ${w % 10}, so it is ${w % 2 ? 'odd' : 'even'}.`;
+const ORD = ['', '1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
+const ORDW = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+const ANIMALS = [['🐶', 'dog'], ['🐱', 'cat'], ['🐭', 'mouse'], ['🐰', 'rabbit'], ['🦊', 'fox'], ['🐻', 'bear'], ['🐼', 'panda'], ['🐸', 'frog'], ['🐷', 'pig'], ['🐵', 'monkey']];
+
+const SKILLS = {
+  count() {
+    if (big() && rnd(0, 2) === 0) {                       // counting on in tens or hundreds, across a boundary
+      const step = pick([10, 100]), extra = level === 'hard';
+      const first = step === 10 ? rnd(1, 8) * 100 + pick([60, 70, 80]) + (extra ? rnd(0, 9) : 0) : rnd(1, 6) * 100 + (extra ? rnd(0, 99) : 0);
+      const seq = [first, first + step, first + 2 * step], ans = first + 3 * step, name = step === 10 ? 'tens' : 'hundreds';
+      return one(`Count on in ${name}: <b>${seq.join(', ')}, ▢</b>`, `Count on in ${name}: ${seq.join(', ')}, blank`, ans,
+        wrongs(ans, [seq[2] + 1, ans + 10, ans - 10, ans + 100, ans - 100, seq[2] + (step === 10 ? 100 : 10)], w => !seq.includes(w)), () => `Counting on in ${name} adds ${step} each time.`);
+    }
+    const n = rndNum(), say = big() ? 'Count the hundreds, tens and ones. Blast the number!' : 'Count the tens and ones. Blast the number!';
+    return one((big() ? 'Blast this number:' : say) + blocks(n), say, n, wrongs(n, mistakes(n)), w => `${w} is ${describe(w)}.`);
+  },
+  place() {
+    const n = rndNum(), [h, t, o] = D(n), v = rnd(0, 3), names = ['hundreds', 'tens', 'ones'], digs = [h, t, o];
+    const i = big() ? rnd(0, 2) : 1;
+    if (v === 2 && (big() || t !== o)) {
+      const html = `Blast the number with <b>${digs[i]}</b> in the <b>${names[i]}</b> place.`;
+      return one(html, plain(html), n, wrongs(n, [...mistakes(n), o * 11, rnd(1, 9) * 10 + t], w => D(w)[i] !== digs[i]), w => `${w} has ${D(w)[i]} in the ${names[i]} place.`);
+    }
+    if (v === 3 && big() && h !== t && t !== o && h !== o && t && o) {
+      const d = digs[i], ans = d * [100, 10, 1][i], j = (i + 1) % 3;
+      const html = `In <b>${n}</b>, what is the value of the digit <b>${d}</b>?`;
+      return one(html, plain(html), ans, [...[d, d * 10, d * 100].filter(x => x !== ans), digs[j] * [100, 10, 1][j]], () => `In ${n}, the digit ${d} is in the ${names[i]} place.`);
+    }
+    const parts = big() ? [h * 100, t * 10, o].filter(x => x) : [t * 10, o].filter(x => x);
+    const sum = v === 1 && parts.length > 1;
+    const html = sum ? `<b>${parts.join(' + ')}</b> makes which number?` : `Blast the number with <b>${describe(n, level === 'hard')}</b>.`;
+    return one(html, plain(html).replace(/\+/g, 'plus'), n, wrongs(n, mistakes(n)), w => `${w} is ${describe(w)}.`);
+  },
+  words() {
+    const n = rndNum(), r = n % 100, pool = mistakes(n);
+    if (r >= 13 && r <= 19) pool.push(n - r + (r - 10) * 10);        // fourteen / forty
+    if (r >= 30 && r % 10 === 0) pool.push(n - r + r / 10 + 10);
+    const html = `Blast the number <b>${words(n)}</b>.`;
+    return one(html, plain(html), n, wrongs(n, pool), w => `${w} is ${words(w)}.`);
+  },
+  moreless() {
+    const ops = [[1, '1 more than'], [-1, '1 less than'], [10, '10 more than'], [-10, '10 less than']];
+    if (big()) ops.push([100, '100 more than'], [-100, '100 less than']);
+    const [d, label] = pick(ops), h = rnd(1, 8), t = rnd(0, 9), o = rnd(0, 9);
+    let n = big() ? rnd(111, 889) : rnd(11, 89);
+    if (level === 'hard') n = d === 10 ? h * 100 + 90 + o : d === -10 ? h * 100 + o : d === 1 ? h * 100 + t * 10 + 9 : d === -1 ? h * 100 + t * 10 : n;   // crosses a ten or a hundred
+    const html = `Blast the number that is <b>${label} ${n}</b>.`;
+    return one(html, plain(html), n + d, shuffle(ops.filter(p => p[0] !== d).map(p => n + p[0]).filter(v => v >= 1 && v <= HI())).slice(0, 3), w => `${w} is ${ops.find(p => n + p[0] === w)[1]} ${n}.`);
+  },
+  compare(mon) {
+    const set = numSet(mon ? 3 : 4), top = rnd(0, 1), word = top ? 'greatest' : 'smallest', best = a => top ? Math.max(...a) : Math.min(...a);
+    const par = rnd(0, 1), same = set.filter(v => v % 2 === par), name = par ? 'odd' : 'even';
+    if (level === 'hard' && !mon && rnd(0, 1) && same.length && same.length < set.length) {      // two steps: the right kind of number first, then the size
+      const ans = best(same), html = `Blast the <b>${word} ${name}</b> number.`;
+      return one(html, plain(html), ans, set.filter(v => v !== ans), w => w % 2 !== par ? parityHint(w) : `${w} is ${name}, but it is not the ${word} ${name} number.`);
+    }
+    const ans = best(set), html = mon ? `Blast the monster with the <b>${word}</b> number.` : `Blast the <b>${word}</b> number.`;
+    const q = one(html, plain(html), ans, set.filter(v => v !== ans), w => `${w} is ${top ? 'smaller' : 'greater'} than ${ans}. ${cmpTip()}`);
+    if (mon) q.kind = 'mon';
+    return q;
+  },
+  order() {
+    const set = numSet(big() ? 4 : 3), up = rnd(0, 1), sorted = [...set].sort((a, b) => up ? a - b : b - a);
+    const first = up ? 'smallest' : 'greatest', html = `Blast the crates in order, from the <b>${first}</b> to the <b>${up ? 'greatest' : 'smallest'}</b>.`;
+    return { kind: 'order', html, say: plain(html), progress: 0, items: set.map(v => ({ label: v, rank: sorted.indexOf(v) })), hint: () => `Not yet! Find the ${first} number that is left. ${cmpTip()}` };
+  },
+  pattern() {
+    const step = pick(level === 'easy' ? [1, 2, 5, 10] : level === 'mid' ? [1, 2, 5, 10, 100] : [3, 4, 10, 20, 25, 50, 100]);
+    const up = rnd(0, 2) > 0, hi = HI(), round = [2, 5, 20, 25, 50].includes(step);
+    const first = round ? rnd(1, Math.floor((hi - 4 * step) / step)) * step : rnd(1, hi - 4 * step);
+    const seq = [0, 1, 2, 3, 4].map(i => first + i * step);
+    if (!up) seq.reverse();
+    const two = level === 'hard' && rnd(0, 1), gaps = two ? pick([[1, 3], [2, 4], [1, 4], [2, 3], [3, 4]]) : [rnd(1, 4)];
+    const show = hole => seq.map((v, i) => gaps.includes(i) ? hole : v).join(', '), hint = () => `The numbers go ${up ? 'up' : 'down'} by ${step} each time.`;
+    const near = a => [a + 1, a - 1, a + 2, a - 2, a + 5, a - 5, a + 10, a - 10, a + step, a - step];
+    if (!two) { const ans = seq[gaps[0]]; return one(`Blast the missing number: <b>${show('▢')}</b>`, `Blast the missing number: ${show('blank')}`, ans, wrongs(ans, near(ans), w => !seq.includes(w)), hint); }
+    const [a, b] = gaps.map(i => seq[i]);
+    return { kind: 'multi', html: `Blast <b>both</b> missing numbers: <b>${show('▢')}</b>`, say: `Blast both missing numbers: ${show('blank')}`, hint,
+      items: [{ label: a, ok: true }, { label: b, ok: true }, ...wrongs(a, [...near(a), ...near(b)], w => !seq.includes(w)).map(w => ({ label: w, ok: false }))] };
+  },
+  oddeven(mon) {
+    const par = rnd(0, 1), name = par ? 'odd' : 'even', lo = level === 'hard' ? 101 : 10;
+    const gen = (ok, used) => { for (let i = 0; i < 500; i++) { const v = rnd(lo, 999); if (ok(v) && !used.includes(v)) { used.push(v); return v; } } };
+    const used = [];
+    if (mon) {
+      const html = `Blast the <b>${name}</b> monster.`, q = one(html, plain(html), gen(v => v % 2 === par, used), [gen(v => v % 2 !== par, used), gen(v => v % 2 !== par, used)], parityHint);
+      q.kind = 'mon'; return q;
+    }
+    if (level === 'hard' && rnd(0, 1)) {                  // two steps: odd or even, and on the right side of a number
+      const cut = pick([300, 500, 700]), gt = rnd(0, 1), side = v => v !== cut && (v > cut) === !!gt, where = `${gt ? 'greater' : 'less'} than ${cut}`;
+      const html = `Blast the number that is <b>${name}</b> and <b>${where}</b>.`;
+      return one(html, plain(html), gen(v => v % 2 === par && side(v), used), [gen(v => v % 2 === par && !side(v) && v !== cut, used), gen(v => v % 2 !== par && side(v), used), gen(v => v % 2 !== par && !side(v), used)],
+        w => w % 2 !== par ? parityHint(w) : `${w} is ${name}, but it is not ${where}.`);
+    }
+    const good = rnd(2, 3), html = `Blast <b>all</b> the <b>${name}</b> numbers.`, items = [];
+    for (let i = 0; i < 5; i++) items.push({ label: gen(v => (v % 2 === par) === (i < good), used), ok: i < good });
+    return { kind: 'multi', html, say: plain(html), items, hint: parityHint };
+  },
+  ordinal() {
+    const p = rnd(1, 10), others = pool => { const out = []; for (const v of [...pool, ...shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])]) if (v >= 1 && v <= 10 && v !== p && !out.includes(v) && out.length < 3) out.push(v); return out.map(v => ORD[v]); };
+    if (rnd(0, 1)) {
+      const html = `Blast the crate that means <b>${ORDW[p]}</b>.`;
+      return one(html, plain(html), ORD[p], others(shuffle([p - 1, p + 1, p - 2, p + 2])), w => `${w} means ${ORDW[ORD.indexOf(w)]}.`);
+    }
+    const row = shuffle([...ANIMALS]), left = rnd(0, 1), side = left ? 'left' : 'right', [emoji, animal] = row[left ? p - 1 : 10 - p];
+    return one(`Count from the <b>${side}</b>. Where is the ${emoji}? <span class="line">${row.map(a => a[0]).join('')}</span>`, `Count from the ${side}. Where is the ${animal}?`, ORD[p],
+      others([11 - p, p - 1, p + 1]), () => `Start at the ${side} end and count: 1st, 2nd, 3rd, and so on.`);
+  }
+};
+
+// ---------- stages ----------
+const THEMES = [
+  { name: 'Garden',   icon: '🌻', floor: ['#7ec850', '#76c148'], wall: ['#5b6677', '#8f9bb0', '#b9c3d4', '#737f93'], brick: ['#5a3414', '#c98a45', '#a66a2c', '#e3aa68'] },
+  { name: 'Ice Cave', icon: '🧊', floor: ['#b9d8ec', '#aecfe6'], wall: ['#2f4a6d', '#6f9ac4', '#a9cbe8', '#55799f'], brick: ['#2b4a6b', '#7fb3d6', '#5f97bd', '#b5d8ee'] },
+  { name: 'Jungle',   icon: '🌴', floor: ['#4f9d3a', '#478f34'], wall: ['#3b2f1e', '#6d5a3a', '#8d7a55', '#55442a'], brick: ['#2f4a1c', '#7fae3f', '#5f8c2c', '#a5cf62'] },
+  { name: 'Factory',  icon: '⚙️', floor: ['#b8bcc4', '#adb1ba'], wall: ['#2f3640', '#57606f', '#7f8a99', '#414a57'], brick: ['#5a3414', '#d98e3b', '#b06f25', '#f0b168'] },
+  { name: 'Castle',   icon: '🏰', floor: ['#8e7aa8', '#84709e'], wall: ['#2d2440', '#5b4d7a', '#8172a3', '#43375d'], brick: ['#4a1f1f', '#b5524a', '#8f3a34', '#d67b72'] }
+];
+const BOSS_STAGE = 4;
+const NEEDS = [4, 4, 5, 5, 6];
+const stageSkills = s => [['count', 'place'], ['words', 'moreless'], ['compare', 'order'], ['pattern', level === 'easy' ? 'ordinal' : 'oddeven']][s];
+const allSkills = () => [0, 1, 2, 3].flatMap(stageSkills);
+const ROSTER = {
+  easy: [['blob', 'blob'], ['blob', 'bat'], ['blob', 'bat'], ['blob', 'bat', 'bat'], ['blob']],
+  mid:  [['blob', 'blob', 'blob'], ['blob', 'blob', 'bat'], ['blob', 'bat', 'bat'], ['blob', 'bat', 'chaser'], ['bat', 'chaser']],
+  hard: [['blob', 'blob', 'bat', 'bat'], ['blob', 'bat', 'bat', 'ghost'], ['bat', 'bat', 'chaser', 'ghost'], ['bat', 'chaser', 'chaser', 'ghost'], ['bat', 'chaser', 'ghost']]
+};
+// milliseconds a monster takes to cross one square (the bomber takes 190)
+const SPEED = {
+  easy: { blob: 430, bat: 310, chaser: 340, ghost: 460, num: 520, boss: 520 },
+  mid:  { blob: 350, bat: 250, chaser: 290, ghost: 420, num: 430, boss: 440 },
+  hard: { blob: 290, bat: 210, chaser: 235, ghost: 380, num: 360, boss: 380 }
+};
+const HEROES = [
+  { name: 'Sunny', helmet: '#ff9f1c', suit: '#3b82f6', need: 0 },
+  { name: 'Blaze', helmet: '#e74c3c', suit: '#2c3e50', need: 6 },
+  { name: 'Leaf',  helmet: '#2ecc71', suit: '#8e44ad', need: 15 },
+  { name: 'Goldie', helmet: '#f1c40f', suit: '#c0392b', need: 30 }
+];
+const POWERS = { speed: ['👟', 'Speed boots', 25000], bomb2: ['💣', 'Two bombs', 25000], shield: ['🛡️', 'Shield', 40000] };
+
+// ---------- game state ----------
+const COLS = 13, ROWS = 11, TS = 32;
+const FLOOR = 0, WALL = 1, BRICK = 2, CRATE = 3;
+const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+const DIRKEYS = Object.keys(DIRS), OPP = { up: 'down', down: 'up', left: 'right', right: 'left' };
+const START = [1, 1];
+const STEP_MS = 190, FAST_MS = 135, FUSE_MS = 2500, BLAST_MS = 450, SAFE_MS = 2000, MAX_HEARTS = 3, FREEZE_MS = 3000;
+
+let grid, fx, mode = 'title';
+const player = { tx: 1, ty: 1, nx: 1, ny: 1, t: 0, dir: 'down', moving: false, step: 0, safe: 0, hearts: MAX_HEARTS };
+let bombs = [], blasts = [], debris = [], monsters = [], crates = [], shake = 0;
+let keyItem = null, door = null, keys = 0, need = 4, wrongBlasts = 0, mission = null, queue = [], lastSay = '';
+let streak = 0, power = null, freeze = 0, playMs = 0, tut = 0, tutBase = 0, boss = null;
+
+const far = (a, b, d) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) >= d;
+const each = fn => { for (let y = 1; y < ROWS - 1; y++) for (let x = 1; x < COLS - 1; x++) fn(x, y); };
+
+function newMaze() {
+  grid = []; fx = [];
+  const free = [];
+  for (let y = 0; y < ROWS; y++) {
+    grid.push([]); fx.push(new Array(COLS).fill(null));
+    for (let x = 0; x < COLS; x++) {
+      const wall = x === 0 || y === 0 || x === COLS - 1 || y === ROWS - 1 || (x % 2 === 0 && y % 2 === 0);
+      grid[y].push(wall ? WALL : FLOOR);
+      // the start corner and the two squares beside it stay clear, so there is room to hide from the first bomb
+      if (!wall && x + y > 3) free.push([x, y]);
+    }
+  }
+  shuffle(free);
+  const bricks = Math.round(free.length * .33);
+  for (const [x, y] of free.slice(0, bricks)) grid[y][x] = BRICK;
+  const open = free.slice(bricks);
+  if (stage === 1) for (const [x, y] of open.slice(0, 12)) fx[y][x] = 'ice';                    // slippery patches
+  if (stage === 3) for (const [x, y] of open.slice(0, 8)) {                                     // conveyor belts
+    const ways = DIRKEYS.filter(d => grid[y + DIRS[d][1]][x + DIRS[d][0]] !== WALL);
+    fx[y][x] = pick(ways);
+  }
+}
+
+const bombAt = (x, y) => bombs.find(b => b.x === x && b.y === y);
+const walkable = (x, y) => grid[y][x] === FLOOR && !bombAt(x, y);
+// the square the bomber counts as standing on (the nearer one while walking)
+const playerCell = () => player.moving && player.t >= .5 ? [player.nx, player.ny] : [player.tx, player.ty];
+const monCell = m => m.moving && m.t >= .5 ? [m.nx, m.ny] : [m.x, m.y];
+const monBusy = () => new Set(monsters.flatMap(m => [m.x + ',' + m.y, m.nx + ',' + m.ny]));
+
+function startStage() {
+  newMaze();
+  Object.assign(player, { tx: START[0], ty: START[1], nx: START[0], ny: START[1], t: 0, dir: 'down', moving: false, step: 0, safe: 0, hearts: MAX_HEARTS });
+  bombs = []; blasts = []; debris = []; monsters = []; crates = []; shake = 0;
+  keyItem = null; door = null; keys = 0; wrongBlasts = 0; mission = null; streak = 0; power = null; playMs = 0; boss = null;
+  need = NEEDS[stage];
+  held.length = 0; setPad(null);
+  buildQueue();
+  for (const type of ROSTER[level][stage]) addMonster(type, farSpot(6), 0);
+  if (stage === BOSS_STAGE) { boss = addMonster('boss', farSpot(8), 0); boss.hp = need; }
+  $('stageName').textContent = `${{ easy: 'Easy', mid: 'Intermediate', hard: 'Challenging' }[level]} · ${THEMES[stage].name}`;
+  $('keysTitle').textContent = boss ? 'BOSS' : 'KEYS';
+  renderHearts(); renderKeys(); renderPower(); hideToast();
+  for (const id of ['title', 'over', 'clear', 'pause']) $(id).classList.remove('show');
+  mode = 'play';
+  tut = level === 'easy' && stage === 0 && !save.tut ? 1 : 0;
+  if (tut) {                                               // first play: learn to walk and bomb before the maths starts
+    tutBase = 0; freeze = FREEZE_MS;
+    setMission("Let's learn how to play!", "Let's learn how to play! Use the arrows to walk around.");
+    toast('Use the arrows to walk around.', 'info', 0);
+  } else nextMission();
+}
+
+function buildQueue() {
+  if (stage < BOSS_STAGE) {
+    const focus = shuffle([...stageSkills(stage)]);
+    queue = Array.from({ length: need }, (_, i) => focus[i % 2]);
+    if (stage > 0) queue[need - 1] = pick([...Array(stage).keys()].flatMap(stageSkills));       // one question from an earlier stage
+    shuffle(queue);
+  } else {                                                 // the boss asks what was missed before, then everything else
+    const all = allSkills(), missed = save.missed[level].filter(k => all.includes(k));
+    queue = [...new Set([...missed, ...shuffle(all)])].slice(0, need + 2);
+  }
+}
+
+function renderHearts() { $('hearts').textContent = '❤️'.repeat(player.hearts) + '🤍'.repeat(MAX_HEARTS - player.hearts); }
+function renderKeys() { $('keys').textContent = boss ? (keys < need ? `👾 ${need - keys} to go` : '👾 beaten!') : `🔑 ${keys} / ${need}`; }
+function renderPower() {
+  const t = power ? `${POWERS[power.type][0]} ${Math.ceil(power.left / 1000)}s` : '🔥'.repeat(streak % 3) + '▫️'.repeat(3 - streak % 3);
+  if ($('power').textContent !== t) $('power').textContent = t;
+}
+function setMission(html, say) { $('mText').innerHTML = html; lastSay = say; speak(say); }
+let toastTimer;
+function toast(text, kind, ms) {
+  const t = $('toast'); t.textContent = text; t.className = 'dialog show ' + kind;
+  clearTimeout(toastTimer); if (ms) toastTimer = setTimeout(hideToast, ms);
+}
+function hideToast() { clearTimeout(toastTimer); $('toast').classList.remove('show'); }
+
+// ---------- monsters ----------
+function farSpot(d) {
+  const me = playerCell(), busy = monBusy();
+  for (; d >= 0; d--) {
+    const spots = [];
+    each((x, y) => { if (grid[y][x] === FLOOR && far([x, y], me, d) && !bombAt(x, y) && !busy.has(x + ',' + y) && !(door && door.x === x && door.y === y)) spots.push([x, y]); });
+    if (spots.length) return pick(spots);
+  }
+  return START;
+}
+function addMonster(type, [x, y], spawn, item) {
+  const m = { type, x, y, nx: x, ny: y, t: 0, moving: false, dir: pick(DIRKEYS), ms: SPEED[level][type], spawn, stun: 0, seed: rnd(0, 999), item };
+  monsters.push(m);
+  return m;
+}
+function monWalk(m, x, y) {
+  const t = grid[y][x];
+  // number monsters never share a square, so one can never hide behind another
+  if (m.type === 'num' && monsters.some(o => o !== m && o.type === 'num' && ((o.x === x && o.y === y) || (o.nx === x && o.ny === y)))) return false;
+  return t !== WALL && t !== CRATE && (t !== BRICK || m.type === 'ghost') && !bombAt(x, y);
+}
+function monChoose(m) {
+  const open = DIRKEYS.filter(d => monWalk(m, m.x + DIRS[d][0], m.y + DIRS[d][1]));
+  if (!open.length) return null;
+  const ahead = open.filter(d => d !== OPP[m.dir]), pool = ahead.length ? ahead : open;
+  const me = playerCell(), gap = d => Math.abs(m.x + DIRS[d][0] - me[0]) + Math.abs(m.y + DIRS[d][1] - me[1]);
+  const hunts = m.type === 'chaser' || m.type === 'boss' ? !far([m.x, m.y], me, 7) && Math.random() < .8 : m.type === 'ghost' && Math.random() < .5;
+  if (hunts) return pool.reduce((a, b) => gap(b) < gap(a) ? b : a);
+  if (m.type === 'bat' && pool.includes(m.dir)) return m.dir;        // bats fly straight until something is in the way
+  return pick(pool);
+}
+function updateMonsters(dt) {
+  for (const m of monsters) {
+    if (m.spawn > 0) { m.spawn -= dt; continue; }
+    if (m.stun > 0) { m.stun -= dt; continue; }
+    if (freeze > 0) continue;
+    if (!m.moving) {
+      const d = monChoose(m);
+      if (d) { m.dir = d; m.nx = m.x + DIRS[d][0]; m.ny = m.y + DIRS[d][1]; m.t = 0; m.moving = true; }
+    } else {
+      m.t += dt / m.ms;
+      if (m.t >= 1) { m.x = m.nx; m.y = m.ny; m.moving = false; }
+    }
+  }
+}
+function blastMonsters() {
+  // the right number monster is dealt with first: a blast that catches it does not also count the wrong ones beside it
+  for (const m of [...monsters].sort((a, b) => !!(b.item && b.item.ok) - !!(a.item && a.item.ok))) {
+    if (m.spawn > 0 || !monsters.includes(m)) continue;
+    const [x, y] = monCell(m);
+    if (!blasts.some(b => b.x === x && b.y === y)) continue;
+    if (m.type === 'boss') { if (m.stun <= 0) { m.stun = 3000; sfxPop(); } continue; }       // bombs only stun the boss
+    monsters.splice(monsters.indexOf(m), 1);
+    debris.push({ x, y, life: 400, col: '#8e44ad' }); sfxPop();
+    if (m.type === 'num') {
+      if (m.item.ok) solved([x, y]); else wrong(m.item.label, null);
+    }
+  }
+}
+
+// ---------- missions ----------
+// every number crate must have an open side the bomber can walk to without breaking another number crate
+function reachable(cells, from) {
+  const key = c => c[0] + ',' + c[1], block = new Set(cells.map(key)), seen = new Set([key(from)]), todo = [from];
+  while (todo.length) {
+    const [x, y] = todo.pop();
+    for (const [dx, dy] of Object.values(DIRS)) {
+      const c = [x + dx, y + dy], k = key(c);
+      if (grid[c[1]][c[0]] === WALL || block.has(k) || seen.has(k)) continue;
+      seen.add(k); todo.push(c);
+    }
+  }
+  return cells.every(([x, y]) => Object.values(DIRS).some(([dx, dy]) => seen.has(key([x + dx, y + dy]))));
+}
+function placeCrates(items) {
+  const me = playerCell(), busy = monBusy(), spots = [];
+  each((x, y) => { if (grid[y][x] !== WALL && far([x, y], me, 3) && !bombAt(x, y) && !busy.has(x + ',' + y) && !(door && door.x === x && door.y === y)) spots.push([x, y]); });
+  let best = [];
+  for (let tries = 0; tries < 150 && best.length < items.length; tries++) {
+    const chosen = [];
+    // three squares apart, so one bomb can never catch two number crates
+    for (const c of shuffle(spots)) { if (chosen.every(d => far(c, d, 3))) chosen.push(c); if (chosen.length === items.length) break; }
+    if (chosen.length > best.length && reachable(chosen, me)) best = chosen;
+  }
+  const order = shuffle(best.map((_, i) => i));            // items are listed right answers first, so any that do not fit are wrong ones
+  crates = best.map(([x, y], i) => {
+    grid[y][x] = CRATE; fx[y][x] = null;
+    for (const [dx, dy] of Object.values(DIRS)) fx[y + dy][x + dx] = null;      // no ice or belts beside a number crate
+    return { x, y, ...items[order[i]] };
+  });
+}
+function nextMission() {
+  const skill = queue.shift() || pick(allSkills());
+  const mon = stage >= 2 && (skill === 'compare' || skill === 'oddeven') && rnd(0, 1) === 0;       // number monsters from the Jungle onwards
+  mission = SKILLS[skill](mon);
+  mission.skill = skill;
+  if (mission.kind === 'mon') for (const item of mission.items) addMonster('num', farSpot(5), 600, item);
+  else placeCrates(mission.items);
+  setMission(mission.html, mission.say);
+  freeze = FREEZE_MS;                                      // monsters wait while the mission is read
+}
+function removeCrate(c) { grid[c.y][c.x] = FLOOR; debris.push({ x: c.x, y: c.y, life: 400 }); crates.splice(crates.indexOf(c), 1); }
+function crateHit(hit) {
+  const m = mission, good = [], bad = [];
+  for (const c of hit) (m.kind === 'order' ? c.rank === m.progress : c.ok) ? good.push(c) : bad.push(c);
+  for (const c of bad) {
+    if (m.kind !== 'order') removeCrate(c);                // in an ordering mission, a crate blasted too early stays put
+    wrong(c.label, m.kind !== 'order' ? [c.x, c.y] : null);
+  }
+  for (const c of good) {
+    removeCrate(c); m.progress = (m.progress || 0) + 1;
+    let left = m.kind === 'order' ? crates.length : crates.filter(k => k.ok).length, last = [c.x, c.y];
+    if (m.kind === 'order' && left === 1) { last = [crates[0].x, crates[0].y]; removeCrate(crates[0]); left = 0; }    // the last one left must be right
+    if (left === 0) solved(last);
+    else if (!bad.length) { sfxStep(m.progress); toast(m.kind === 'order' ? 'Yes! What comes next?' : `Yes! ${left} more to find.`, 'good', 2500); }
+  }
+}
+function wrong(label, cell) {
+  wrongBlasts++; streak = 0;
+  if (!mission.miss) {
+    mission.miss = true;
+    if (!save.missed[level].includes(mission.skill)) { save.missed[level].push(mission.skill); persist(); }
+    queue.splice(Math.min(1, queue.length), 0, mission.skill);         // the same kind of question comes back soon
+  }
+  const hint = mission.hint(label) + ' Try again!';
+  sfxBad(); toast(hint, 'bad', 6000); speak(hint);
+  const cap = level === 'easy' ? 4 : 6;                   // a wrong blast lets one more monster out
+  if (monsters.filter(m => m.type !== 'num' && m.type !== 'boss').length < cap) addMonster('blob', cell || farSpot(5), 900);
+}
+function solved(cell) {
+  for (const c of crates) grid[c.y][c.x] = BRICK;          // the other number crates turn back into plain crates
+  crates = []; monsters = monsters.filter(m => m.type !== 'num');
+  keyItem = { x: cell[0], y: cell[1] };
+  sfxGood(); toast(boss ? 'Yes! Grab the star to zap the boss.' : 'Yes! Grab the key.', 'good', 2500);
+  if (!mission.miss && ++streak % 3 === 0) {
+    const type = pick(Object.keys(POWERS));
+    power = { type, left: POWERS[type][2] };
+    sfxPower(); toast(`3 in a row! You win: ${POWERS[type][1]}.`, 'good', 3500);
+  }
+}
+function collect() {
+  keyItem = null; keys++; sfxKey();
+  if (boss) { boss.hp--; boss.stun = 1500; boss.zap = 600; shake = 250; }
+  renderKeys();
+  if (keys < need) return nextMission();
+  if (boss) { monsters.splice(monsters.indexOf(boss), 1); debris.push({ x: boss.x, y: boss.y, life: 700, col: '#4a235a', big: true }); sfxBoom(); }
+  const [x, y] = farSpot(4);
+  door = { x, y }; sfxDoor();
+  const msg = boss ? 'You beat the boss! Run to the door.' : 'You have all the keys! Run to the door.';
+  setMission(msg.replace('door', '<b>door</b>'), msg);
+}
+function stageClear() {
+  mode = 'clear';
+  const stars = wrongBlasts === 0 ? 3 : wrongBlasts <= 2 ? 2 : 1, last = stage === BOSS_STAGE, secs = Math.round(playMs / 1000);
+  save.stars[level][stage] = Math.max(save.stars[level][stage], stars);
+  if (last) save.missed[level] = [];
+  persist();
+  $('clearTitle').textContent = last ? 'LEVEL COMPLETE!' : 'STAGE CLEAR!';
+  $('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+  let text = wrongBlasts === 0 ? 'Every answer right on the first try. Perfect!' : `You finished with ${wrongBlasts} wrong ${wrongBlasts === 1 ? 'blast' : 'blasts'}.`;
+  if (level === 'hard') text += ` Time: ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}.` + (secs <= 240 ? ' ⚡ Speed bonus!' : '');
+  $('clearStats').textContent = text;
+  $('nextBtn').style.display = last ? 'none' : '';
+  hideToast(); hush(); sfxWin();
+  $('clear').classList.add('show');
+}
+
+// ---------- bombs ----------
+function placeBomb() {
+  if (mode !== 'play' || bombs.length >= (power && power.type === 'bomb2' ? 2 : 1)) return;
+  const [x, y] = playerCell();
+  if (bombAt(x, y)) return;
+  bombs.push({ x, y, fuse: FUSE_MS });
+  sfxPlace();
+}
+function explode(b) {
+  bombs.splice(bombs.indexOf(b), 1);
+  const cells = [[b.x, b.y]], hit = [];
+  for (const [dx, dy] of Object.values(DIRS)) {
+    const x = b.x + dx, y = b.y + dy, t = grid[y][x];
+    if (t === WALL) continue;
+    cells.push([x, y]);
+    if (t === BRICK) { grid[y][x] = FLOOR; debris.push({ x, y, life: 400 }); }
+    if (t === CRATE) hit.push(crates.find(c => c.x === x && c.y === y));
+  }
+  for (const [x, y] of cells) {
+    blasts.push({ x, y, life: BLAST_MS });
+    const other = bombAt(x, y);
+    if (other) other.fuse = Math.min(other.fuse, 80);     // a blast sets off the next bomb
+  }
+  shake = 250;
+  sfxBoom();
+  if (hit.length) crateHit(hit);
+  if (tut === 2) tut = 3;
+}
+function hurt() {
+  if (player.safe > 0) return;
+  player.safe = SAFE_MS;
+  if (power && power.type === 'shield') { power = null; sfxPop(); toast('Your shield saved you!', 'info', 2500); return; }
+  player.hearts--; streak = 0;
+  renderHearts(); sfxHurt();
+  if (player.hearts <= 0) { mode = 'over'; hush(); hideToast(); $('over').classList.add('show'); }
+}
+
+function update(dt) {
+  if (mode !== 'play') return;
+  const p = player;
+  playMs += dt;
+  if (p.safe > 0) p.safe -= dt;
+  if (freeze > 0 && !tut) freeze -= dt;
+  if (power && (power.left -= dt) <= 0) power = null;
+  let carry = 0, arrived = false;
+  if (p.moving) {
+    p.t += dt / (power && power.type === 'speed' ? FAST_MS : STEP_MS);
+    if (p.t >= 1) { carry = p.t - 1; p.tx = p.nx; p.ty = p.ny; p.moving = false; p.step++; arrived = true; }
+  }
+  if (!p.moving) {
+    let d = held.length ? held[held.length - 1] : padDir;
+    const f = fx[p.ty][p.tx];
+    if (f === 'ice' && arrived) d = p.dir;                 // ice: keep sliding the same way
+    else if (f && f !== 'ice' && !d) d = f;                // a belt carries the bomber along when standing still
+    if (d) {
+      p.dir = d;
+      const [dx, dy] = DIRS[d], nx = p.tx + dx, ny = p.ty + dy;
+      if (walkable(nx, ny)) { p.nx = nx; p.ny = ny; p.t = Math.min(carry, .5); p.moving = true; }
+    }
+  }
+  for (const b of [...bombs]) { b.fuse -= dt; if (b.fuse <= 0) explode(b); }
+  for (const b of blasts) b.life -= dt;
+  for (const b of debris) b.life -= dt;
+  blasts = blasts.filter(b => b.life > 0);
+  debris = debris.filter(b => b.life > 0);
+  updateMonsters(dt);
+  if (blasts.length) blastMonsters();
+  shake = Math.max(0, shake - dt);
+  if (boss && boss.zap > 0) boss.zap -= dt;
+
+  const [px, py] = playerCell(), k = p.moving ? p.t : 0, fxp = p.tx + (p.nx - p.tx) * k, fyp = p.ty + (p.ny - p.ty) * k;
+  if (blasts.some(b => b.x === px && b.y === py)) hurt();
+  for (const m of monsters) {
+    if (m.spawn > 0 || m.stun > 0) continue;
+    const j = m.moving ? m.t : 0;
+    if (Math.abs(m.x + (m.nx - m.x) * j - fxp) + Math.abs(m.y + (m.ny - m.y) * j - fyp) < .7) hurt();
+  }
+  if (mode !== 'play') return;
+  if (keyItem && keyItem.x === px && keyItem.y === py) collect();
+  if (door && !p.moving && door.x === p.tx && door.y === p.ty) return stageClear();
+  renderPower();
+
+  if (tut === 1 && p.step >= 3) { tut = 2; const s = 'Press the red button to drop a bomb. Then walk away before it goes off!'; toast(s, 'info', 0); speak(s); }
+  if (tut === 3 && !blasts.length) { tut = 0; save.tut = true; persist(); toast('Now read the mission and blast the right yellow crate!', 'info', 5000); nextMission(); }
+}
+
+// ---------- drawing ----------
+const cv = $('cv'), ctx = cv.getContext('2d');
+const disc = (x, y, r, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+const oval = (x, y, rx, ry, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fill(); };
+
+function drawTile(x, y, time) {
+  const t = grid[y][x], X = x * TS, Y = y * TS, th = THEMES[stage];
+  if (t === WALL) {
+    ctx.fillStyle = th.wall[0]; ctx.fillRect(X, Y, TS, TS);
+    ctx.fillStyle = th.wall[1]; ctx.fillRect(X + 1, Y + 1, TS - 2, TS - 5);
+    ctx.fillStyle = th.wall[2]; ctx.fillRect(X + 3, Y + 3, TS - 6, 3);
+    ctx.fillStyle = th.wall[3]; ctx.fillRect(X + 6, Y + 13, 8, 2); ctx.fillRect(X + 18, Y + 20, 8, 2);
+    return;
+  }
+  ctx.fillStyle = th.floor[(x + y) % 2]; ctx.fillRect(X, Y, TS, TS);
+  const f = fx[y][x];
+  if (f === 'ice') {
+    ctx.fillStyle = '#eefaff'; ctx.fillRect(X + 1, Y + 1, TS - 2, TS - 2);
+    ctx.fillStyle = '#fff'; ctx.fillRect(X + 6, Y + 8, 10, 2); ctx.fillRect(X + 16, Y + 20, 9, 2);
+    ctx.fillStyle = '#bfe6fb'; ctx.fillRect(X + 4, Y + 24, 6, 2);
+  } else if (f) {
+    ctx.fillStyle = '#3d4654'; ctx.fillRect(X + 2, Y + 2, TS - 4, TS - 4);
+    const [dx, dy] = DIRS[f], slide = (time / 60) % 10;
+    ctx.fillStyle = '#ffd43b';
+    for (let i = -1; i < 3; i++) {
+      const o = i * 10 + slide, cx = X + 16 + (dx ? dx * (o - 10) : 0), cy = Y + 16 + (dy ? dy * (o - 10) : 0);
+      if (Math.abs(cx - X - 16) > 11 || Math.abs(cy - Y - 16) > 11) continue;
+      ctx.beginPath(); ctx.moveTo(cx + dx * 4, cy + dy * 4); ctx.lineTo(cx - dx * 3 + dy * 5, cy - dy * 3 + dx * 5); ctx.lineTo(cx - dx * 3 - dy * 5, cy - dy * 3 - dx * 5); ctx.fill();
+    }
+  }
+  if (grid[y - 1][x] === WALL) { ctx.fillStyle = 'rgba(0,0,0,.14)'; ctx.fillRect(X, Y, TS, 4); }
+  if (t === BRICK) {
+    ctx.fillStyle = th.brick[0]; ctx.fillRect(X + 1, Y + 1, TS - 2, TS - 2);
+    ctx.fillStyle = th.brick[1]; ctx.fillRect(X + 3, Y + 3, TS - 6, TS - 6);
+    ctx.fillStyle = th.brick[2]; ctx.fillRect(X + 3, Y + 11, TS - 6, 2); ctx.fillRect(X + 3, Y + 20, TS - 6, 2);
+    ctx.fillStyle = th.brick[3]; ctx.fillRect(X + 3, Y + 3, TS - 6, 2);
+    ctx.fillStyle = th.brick[0]; for (const [ox, oy] of [[5, 6], [25, 6], [5, 25], [25, 25]]) ctx.fillRect(X + ox, Y + oy, 2, 2);
+  }
+}
+function label(text, x, y, col, sizes = [17, 13, 10]) {
+  const s = String(text);
+  ctx.fillStyle = col; ctx.font = `800 ${s.length > 3 ? sizes[2] : s.length > 2 ? sizes[1] : sizes[0]}px "Baloo 2", sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y);
+}
+function drawCrate(c) {
+  const X = c.x * TS, Y = c.y * TS;
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(X + 1, Y + 1, TS - 2, TS - 2);
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(X + 3, Y + 3, TS - 6, TS - 6);
+  ctx.fillStyle = '#fff3b0'; ctx.fillRect(X + 3, Y + 3, TS - 6, 3);
+  ctx.fillStyle = '#e0a800'; ctx.fillRect(X + 3, Y + TS - 6, TS - 6, 3);
+  label(c.label, X + 16, Y + 17, '#1b2a41');
+}
+function drawKey(time) {
+  const X = keyItem.x * TS + 16, Y = keyItem.y * TS + 15 + Math.sin(time / 200) * 2;
+  oval(X, keyItem.y * TS + 28, 8, 3, 'rgba(0,0,0,.2)');
+  if (boss) {                                              // in the boss stage the prize is a star that zaps the boss
+    for (const [r, col] of [[12, '#1b2a41'], [9.5, '#ffd43b']]) {
+      ctx.fillStyle = col; ctx.beginPath();
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; ctx.lineTo(X + Math.cos(a) * rr, Y + Math.sin(a) * rr); }
+      ctx.fill();
+    }
+    return;
+  }
+  ctx.fillStyle = '#1b2a41'; ctx.beginPath(); ctx.arc(X - 5, Y, 8, 0, 7); ctx.fill(); ctx.fillRect(X - 1, Y - 3, 15, 6); ctx.fillRect(X + 7, Y, 3, 7); ctx.fillRect(X + 11, Y, 3, 6);
+  ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(X - 5, Y, 6, 0, 7); ctx.fill(); ctx.fillRect(X, Y - 1, 13, 2); ctx.fillRect(X + 8, Y, 1, 5); ctx.fillRect(X + 12, Y, 1, 4);
+  disc(X - 5, Y, 2.5, '#1b2a41');
+}
+function drawDoor(time) {
+  const X = door.x * TS, Y = door.y * TS;
+  ctx.fillStyle = `rgba(255,224,102,${.45 + Math.sin(time / 250) * .25})`; ctx.fillRect(X, Y, TS, TS);
+  ctx.fillStyle = '#1b2a41'; ctx.beginPath(); ctx.roundRect(X + 5, Y + 2, 22, 30, [10, 10, 0, 0]); ctx.fill();
+  ctx.fillStyle = '#8d5a2b'; ctx.beginPath(); ctx.roundRect(X + 7, Y + 4, 18, 28, [8, 8, 0, 0]); ctx.fill();
+  ctx.fillStyle = '#6f4420'; ctx.fillRect(X + 15, Y + 4, 2, 28);
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(X + 19, Y + 18, 3, 3);
+}
+function drawBomb(b, time) {
+  const X = b.x * TS + 16, Y = b.y * TS + 17;
+  const fast = b.fuse < 700, r = 10 + Math.sin(time / (fast ? 50 : 130)) * 1.2;
+  oval(X, Y + 11, 10, 3, 'rgba(0,0,0,.25)');
+  disc(X, Y, r, fast && Math.floor(time / 90) % 2 ? '#c0392b' : '#1b2a41');
+  disc(X - 4, Y - 4, 2.5, 'rgba(255,255,255,.55)');
+  ctx.fillStyle = '#8d5a2b'; ctx.fillRect(X + 3, Y - 14, 3, 6);
+  disc(X + 5, Y - 15, 3, Math.floor(time / 80) % 2 ? '#ffd43b' : '#ff7b00');
+}
+function drawBlast(b) {
+  const X = b.x * TS, Y = b.y * TS, k = b.life / BLAST_MS;
+  ctx.globalAlpha = Math.min(1, k * 2);
+  for (const [inset, col] of [[1, '#ff7b00'], [5, '#ffd43b'], [10, '#fff']]) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.roundRect(X + inset, Y + inset, TS - inset * 2, TS - inset * 2, 6); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function drawDebris(b) {
+  const total = b.big ? 700 : 400, X = b.x * TS + 16, Y = b.y * TS + 16, k = 1 - b.life / total, reach = b.big ? 34 : 16;
+  ctx.globalAlpha = 1 - k; ctx.fillStyle = b.col || THEMES[stage].brick[2];
+  for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1.3], [0, 1.3], [-1.3, 0], [1.3, 0]]) ctx.fillRect(X + dx * k * reach - 3, Y + dy * k * reach - 3, 6, 6);
+  ctx.globalAlpha = 1;
+}
+function eyes(x, y, dir, gap = 4, angry) {
+  const [dx, dy] = DIRS[dir];
+  for (const s of [-1, 1]) { disc(x + s * gap, y, 3, '#fff'); disc(x + s * gap + dx * 1.2, y + dy * 1.2, 1.5, '#1b2a41'); }
+  if (angry) { ctx.fillStyle = '#1b2a41'; ctx.beginPath(); ctx.moveTo(x - gap - 4, y - 6); ctx.lineTo(x - 1, y - 2.5); ctx.lineTo(x - 1, y - 4.5); ctx.fill(); ctx.beginPath(); ctx.moveTo(x + gap + 4, y - 6); ctx.lineTo(x + 1, y - 2.5); ctx.lineTo(x + 1, y - 4.5); ctx.fill(); }
+}
+function drawMonster(m, time) {
+  const k = m.moving ? m.t : 0, cx = (m.x + (m.nx - m.x) * k) * TS + 16, cy = (m.y + (m.ny - m.y) * k) * TS + 17;
+  const still = freeze > 0 || m.stun > 0, wob = still ? 0 : Math.sin(time / 150 + m.seed);
+  ctx.save();
+  if (m.spawn > 0) ctx.globalAlpha = Math.max(.15, 1 - m.spawn / 900);
+  if (m.type !== 'bat' && m.type !== 'ghost') oval(cx, cy + 12, 10, 3, 'rgba(0,0,0,.22)');
+  if (m.type === 'blob') {
+    oval(cx, cy + 1 - wob, 11 + wob, 10 - wob, '#5b2c83'); oval(cx, cy - wob, 9.5 + wob, 8.5 - wob, '#9b59b6');
+    eyes(cx, cy - 2 - wob, m.dir);
+  } else if (m.type === 'bat') {
+    const flap = wob * 5;
+    ctx.fillStyle = '#34495e';
+    for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + s * 5, cy - 2); ctx.lineTo(cx + s * 15, cy - 8 + flap); ctx.lineTo(cx + s * 13, cy + 3 + flap * .4); ctx.lineTo(cx + s * 5, cy + 5); ctx.fill(); }
+    disc(cx, cy, 8, '#2c3e50'); ctx.fillRect(cx - 7, cy - 11, 4, 5); ctx.fillRect(cx + 3, cy - 11, 4, 5);
+    eyes(cx, cy - 1, m.dir, 3.5);
+  } else if (m.type === 'chaser') {
+    ctx.fillStyle = '#7b241c'; ctx.beginPath(); ctx.moveTo(cx - 9, cy - 6); ctx.lineTo(cx - 6, cy - 14); ctx.lineTo(cx - 2, cy - 8); ctx.fill(); ctx.beginPath(); ctx.moveTo(cx + 9, cy - 6); ctx.lineTo(cx + 6, cy - 14); ctx.lineTo(cx + 2, cy - 8); ctx.fill();
+    disc(cx, cy + wob * .5, 11, '#7b241c'); disc(cx, cy - 1 + wob * .5, 9.5, '#e74c3c');
+    eyes(cx, cy - 1, m.dir, 4, true);
+    ctx.fillStyle = '#fff'; ctx.fillRect(cx - 4, cy + 5, 3, 3); ctx.fillRect(cx + 1, cy + 5, 3, 3);
+  } else if (m.type === 'ghost') {
+    ctx.globalAlpha *= .8;
+    ctx.fillStyle = '#f4f6fb'; ctx.beginPath(); ctx.arc(cx, cy - 2 + wob, 10, Math.PI, 0); ctx.lineTo(cx + 10, cy + 10 + wob);
+    for (let i = 0; i < 4; i++) { ctx.lineTo(cx + 7.5 - i * 5, cy + (i % 2 ? 10 : 6) + wob); }
+    ctx.lineTo(cx - 10, cy + 10 + wob); ctx.fill();
+    disc(cx - 4, cy - 2 + wob, 2.2, '#1b2a41'); disc(cx + 4, cy - 2 + wob, 2.2, '#1b2a41');
+  } else if (m.type === 'num') {
+    ctx.fillStyle = '#0b5345'; ctx.fillRect(cx - 6, cy - 15, 2, 5); ctx.fillRect(cx + 4, cy - 15, 2, 5);
+    disc(cx - 5, cy - 15 + wob, 3, '#fff'); disc(cx + 5, cy - 15 - wob, 3, '#fff'); disc(cx - 5, cy - 15 + wob, 1.4, '#1b2a41'); disc(cx + 5, cy - 15 - wob, 1.4, '#1b2a41');
+    ctx.fillStyle = '#0b5345'; ctx.beginPath(); ctx.roundRect(cx - 14, cy - 11, 28, 23, 8); ctx.fill();
+    ctx.fillStyle = '#17a589'; ctx.beginPath(); ctx.roundRect(cx - 12.5, cy - 9.5, 25, 20, 7); ctx.fill();
+    label(m.item.label, cx, cy + 1, '#fff', [16, 13, 10]);
+  } else {                                                 // boss
+    const s = 1.45; ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
+    disc(cx, cy, 12, '#2a1235'); disc(cx, cy - 1, 10.5, m.zap > 0 && Math.floor(time / 70) % 2 ? '#fff' : '#6c3483');
+    ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.moveTo(cx - 8, cy - 9); ctx.lineTo(cx - 8, cy - 16); ctx.lineTo(cx - 4, cy - 12); ctx.lineTo(cx, cy - 17); ctx.lineTo(cx + 4, cy - 12); ctx.lineTo(cx + 8, cy - 16); ctx.lineTo(cx + 8, cy - 9); ctx.fill();
+    eyes(cx, cy - 2, m.dir, 4, true);
+    ctx.fillStyle = '#fff'; ctx.fillRect(cx - 5, cy + 4, 10, 3); ctx.fillStyle = '#2a1235'; ctx.fillRect(cx - 2, cy + 4, 1, 3); ctx.fillRect(cx + 1, cy + 4, 1, 3);
+    if (m.stun <= 0) { ctx.strokeStyle = `rgba(127,208,255,${.5 + Math.sin(time / 200) * .3})`; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 14.5, 0, 7); ctx.stroke(); }
+  }
+  ctx.restore();
+  if (still && m.spawn <= 0) { ctx.fillStyle = 'rgba(127,208,255,.35)'; ctx.beginPath(); ctx.arc(cx, cy, 13, 0, 7); ctx.fill(); label(m.stun > 0 ? '★' : 'z', cx + 11, cy - 12 + Math.sin(time / 300) * 2, '#fff', [11, 11, 11]); }
+}
+function drawPlayer(time) {
+  const p = player, k = p.moving ? p.t : 0, h = HEROES[save.hero] || HEROES[0];
+  if (p.safe > 0 && Math.floor(time / 100) % 2) return;       // flashing while safe after a hit
+  const X = Math.round((p.tx + (p.nx - p.tx) * k) * TS), Y = Math.round((p.ty + (p.ny - p.ty) * k) * TS);
+  const walk = p.moving ? (p.t < .5 ? 1 : -1) * (p.step % 2 ? 1 : -1) : 0, bob = p.moving && p.t > .25 && p.t < .75 ? -1 : 0;
+  oval(X + 16, Y + 30, 9, 3, 'rgba(0,0,0,.2)');
+  ctx.fillStyle = '#1b2a41'; ctx.fillRect(X + 10, Y + 26 + Math.max(0, walk) * -2, 5, 4); ctx.fillRect(X + 17, Y + 26 + Math.max(0, -walk) * -2, 5, 4);   // boots
+  const y = Y + bob;
+  ctx.fillStyle = h.suit; ctx.fillRect(X + 9, y + 17, 14, 10);                                               // overalls
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(X + 14, y + 19, 4, 3);                                             // buckle
+  ctx.fillStyle = '#f2c79c'; ctx.fillRect(X + 6, y + 18, 3, 6); ctx.fillRect(X + 23, y + 18, 3, 6);          // arms
+  ctx.fillRect(X + 9, y + 6, 14, 12);                                                                        // head
+  ctx.fillStyle = h.helmet; ctx.fillRect(X + 7, y + 2, 18, 7); ctx.fillRect(X + 9, y, 14, 3);                // helmet
+  ctx.fillStyle = '#fff'; ctx.fillRect(X + 14, y + 1, 4, 5);                                                 // helmet lamp
+  if (p.dir === 'up') { ctx.fillStyle = h.helmet; ctx.fillRect(X + 8, y + 2, 16, 12); }
+  else {
+    ctx.fillStyle = '#1b2a41';
+    if (p.dir === 'down') { ctx.fillRect(X + 12, y + 11, 2, 3); ctx.fillRect(X + 18, y + 11, 2, 3); }
+    else ctx.fillRect(X + (p.dir === 'left' ? 11 : 19), y + 11, 2, 3);
+  }
+  if (power && power.type === 'shield') { ctx.strokeStyle = 'rgba(127,208,255,.9)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(X + 16, Y + 16, 17, 0, 7); ctx.stroke(); ctx.fillStyle = 'rgba(127,208,255,.2)'; ctx.fill(); }
+}
+
+let last = 0;
+function frame(time) {
+  update(Math.min(50, time - last)); last = time;
+  draw(time);
+  requestAnimationFrame(frame);
+}
+function draw(time) {
+  if (!grid) return;
+  const s = shake > 0 ? 2 : 0;
+  ctx.setTransform(2, 0, 0, 2, rnd(-s, s), rnd(-s, s));
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) drawTile(x, y, time);
+  for (const c of crates) drawCrate(c);
+  if (door) drawDoor(time);
+  if (keyItem) drawKey(time);
+  for (const b of debris) drawDebris(b);
+  for (const b of bombs) drawBomb(b, time);
+  for (const m of monsters) if (m.type !== 'boss') drawMonster(m, time);
+  drawPlayer(time);
+  if (boss && monsters.includes(boss)) drawMonster(boss, time);
+  for (const b of blasts) drawBlast(b);
+}
+
+// ---------- input ----------
+const KEYDIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', w: 'up', s: 'down', a: 'left', d: 'right' };
+const held = [];
+let padDir = null;
+addEventListener('keydown', e => {
+  const d = KEYDIR[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (d) { e.preventDefault(); if (!held.includes(d)) held.push(d); return; }
+  if (e.key === ' ') { e.preventDefault(); if (!e.repeat) placeBomb(); return; }
+  if (e.key === 'Escape' || e.key === 'p') { if (mode === 'play') pause(); else if (mode === 'pause') resume(); return; }
+  if (e.key === 'Enter') { const b = { title: 'startBtn', over: 'againBtn', clear: stage === BOSS_STAGE ? 'clearMenuBtn' : 'nextBtn', pause: 'resumeBtn' }[mode]; if (b) $(b).click(); }
+});
+addEventListener('keyup', e => { const d = KEYDIR[e.key.length === 1 ? e.key.toLowerCase() : e.key], i = held.indexOf(d); if (i >= 0) held.splice(i, 1); });
+addEventListener('blur', () => { held.length = 0; setPad(null); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play') pause(); });
+
+// one round pad: the direction follows the thumb, so a child can slide between arrows without lifting
+const dpad = $('dpad');
+function setPad(d) {
+  padDir = d;
+  dpad.querySelectorAll('i').forEach(i => i.classList.toggle('on', i.classList.contains(d)));
+}
+function padFrom(e) {
+  const r = dpad.getBoundingClientRect(), dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  if (Math.hypot(dx, dy) < r.width * .1) return setPad(null);
+  setPad(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
+}
+dpad.addEventListener('pointerdown', e => { e.preventDefault(); try { dpad.setPointerCapture(e.pointerId); } catch (err) {} padFrom(e); });
+dpad.addEventListener('pointermove', e => { if (dpad.hasPointerCapture(e.pointerId)) padFrom(e); });
+for (const ev of ['pointerup', 'pointercancel']) dpad.addEventListener(ev, () => setPad(null));
+
+const bombBtn = $('bombBtn');
+bombBtn.addEventListener('pointerdown', e => { e.preventDefault(); bombBtn.classList.add('down'); placeBomb(); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) bombBtn.addEventListener(ev, () => bombBtn.classList.remove('down'));
+addEventListener('contextmenu', e => e.preventDefault());
+
+// ---------- menus ----------
+const unlocked = i => i === 0 || save.stars[level][i - 1] > 0;
+function renderMenu() {
+  document.querySelectorAll('#levels .opt').forEach(b => b.classList.toggle('sel', b.dataset.lv === level));
+  if (!unlocked(stage)) stage = 0;
+  $('stages').innerHTML = THEMES.map((t, i) => {
+    const n = save.stars[level][i];
+    return `<button class="opt${i === stage ? ' sel' : ''}" data-st="${i}"${unlocked(i) ? '' : ' disabled'}>${t.icon} ${t.name}<small>${unlocked(i) ? '⭐'.repeat(n) + '☆'.repeat(3 - n) : '🔒 locked'}</small></button>`;
+  }).join('');
+  const have = totalStars();
+  if (have < HEROES[save.hero].need) save.hero = 0;
+  $('heroes').innerHTML = HEROES.map((h, i) => `<button class="opt${i === save.hero ? ' sel' : ''}" data-hero="${i}"${have >= h.need ? '' : ' disabled'}><span class="dot" style="background:linear-gradient(${h.helmet} 50%, ${h.suit} 50%)"></span>${h.name}<small>${have >= h.need ? 'ready' : `needs ${h.need} ⭐`}</small></button>`).join('');
+}
+function goMenu() {
+  hush(); hideToast();
+  for (const id of ['over', 'clear', 'pause']) $(id).classList.remove('show');
+  mode = 'title';
+  // offer the first stage that has not been cleared yet
+  const next = save.stars[level].findIndex(s => s === 0);
+  if (next >= 0 && save.stars[level][stage] > 0) stage = next;
+  renderMenu();
+  $('title').classList.add('show');
+}
+function pause() { mode = 'pause'; hush(); held.length = 0; setPad(null); $('pause').classList.add('show'); }
+function resume() { $('pause').classList.remove('show'); mode = 'play'; }
+$('levels').onclick = e => { const b = e.target.closest('.opt'); if (!b) return; level = b.dataset.lv; const next = save.stars[level].findIndex(s => s === 0); stage = next < 0 ? 0 : next; renderMenu(); };
+$('stages').onclick = e => { const b = e.target.closest('.opt'); if (!b || b.disabled) return; stage = +b.dataset.st; renderMenu(); };
+$('heroes').onclick = e => { const b = e.target.closest('.opt'); if (!b || b.disabled) return; save.hero = +b.dataset.hero; persist(); renderMenu(); };
+$('startBtn').onclick = () => { beep(660, .1); startStage(); };
+$('againBtn').onclick = $('replayBtn').onclick = startStage;
+$('restartBtn').onclick = startStage;
+$('nextBtn').onclick = () => { stage = Math.min(BOSS_STAGE, stage + 1); startStage(); };
+$('overMenuBtn').onclick = $('clearMenuBtn').onclick = $('quitBtn').onclick = goMenu;
+$('pauseBtn').onclick = () => { if (mode === 'play') pause(); };
+$('resumeBtn').onclick = resume;
+$('muteBtn').onclick = () => { muted = !muted; $('muteBtn').textContent = 'SOUND: ' + (muted ? 'OFF' : 'ON'); if (muted) hush(); };
+$('sayBtn').onclick = () => speak(lastSay);
+if (document.fonts) document.fonts.load('800 16px "Baloo 2"');
+
+// test hook (add ?debug to the address): steps the game by hand when the screen is not animating
+if (location.search.includes('debug')) {
+  let clock = 0;
+  window.nbDebug = {
+    tick(ms) { for (let t = 0; t < ms; t += 16) { clock += 16; update(16); } draw(clock); return this.state(); },
+    state: () => ({ mode, level, stage, cell: playerCell(), hearts: player.hearts, safe: Math.round(player.safe), bombs: bombs.length, blasts: blasts.length, grid: grid.map(r => r.join('')), fx: fx.flat().filter(Boolean).length,
+      say: lastSay, kind: mission && mission.kind, skill: mission && mission.skill, progress: mission && mission.progress, crates: crates.map(c => ({ ...c })), keys, need, wrongBlasts, keyItem, door, streak, power: power && power.type, freeze: Math.round(freeze), tut,
+      monsters: monsters.map(m => ({ type: m.type, x: m.x, y: m.y, item: m.item, stun: Math.round(m.stun), hp: m.hp })), queue: [...queue], toast: $('toast').classList.contains('show') ? $('toast').textContent : '', save: JSON.parse(JSON.stringify(save)) }),
+    warp(x, y) { Object.assign(player, { tx: x, ty: y, nx: x, ny: y, moving: false, t: 0 }); },
+    calm() { monsters = monsters.filter(m => m.type === 'num' || m.type === 'boss'); },
+    begin(lv, st) { level = lv; stage = st; save.tut = true; startStage(); },
+    ask(skill) { queue.unshift(skill); },
+    sample(skill, lv, mon) { const keep = level; level = lv; const q = SKILLS[skill](mon), hints = q.items.map(i => q.hint(i.label)); level = keep; return { kind: q.kind, html: q.html, say: q.say, items: q.items, hints }; },
+    reset() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} }
+  };
+}
+
+stage = Math.max(0, save.stars[level].findIndex(s => s === 0));
+renderMenu();
+newMaze();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
