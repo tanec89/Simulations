@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>P2 Chef in Math Kitchen</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1b2a41; font-family: 'Baloo 2', 'Trebuchet MS', sans-serif; color: #1b2a41; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+  button { font-family: inherit; color: inherit; }
+  #app { position: relative; height: 100%; max-width: 1366px; margin: 0 auto; display: flex; flex-direction: column; background: repeating-linear-gradient(0deg, rgba(27,42,65,.06) 0 2px, transparent 2px 64px), repeating-linear-gradient(90deg, rgba(27,42,65,.06) 0 2px, transparent 2px 64px), #fff3d6; }
+
+  /* ---------- fractions ---------- */
+  .fr { display: inline-flex; flex-direction: column; vertical-align: middle; text-align: center; line-height: 1; font-weight: 800; margin: 0 4px; }
+  .fr b:first-child { border-bottom: 3px solid currentColor; padding: 0 4px 2px; }
+  .fr b:last-child { padding: 2px 4px 0; }
+
+  /* ---------- speech bubble and small buttons ---------- */
+  .bubble { flex: none; display: flex; align-items: center; gap: 10px; margin: 8px; background: #fff; border: 4px solid #1b2a41; border-radius: 16px; padding: 6px 12px; font-size: clamp(17px, 2.5vw, 24px); font-weight: 700; line-height: 1.25; box-shadow: 0 4px 0 rgba(27,42,65,.25); }
+  .bubble .chef { font-size: 44px; line-height: 1; flex: none; }
+  .bubble > div { flex: 1; }
+  .bubble b { color: #c0392b; }
+  .tool { flex: none; border: 3px solid #1b2a41; background: #ffe066; border-radius: 10px; font-size: 20px; padding: 2px 9px; cursor: pointer; box-shadow: 0 3px 0 rgba(27,42,65,.3); }
+
+  /* ---------- top bar ---------- */
+  #hud { flex: none; height: 54px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: #1b2a41; color: #fff; font-weight: 800; font-size: 20px; position: relative; z-index: 12; }
+  .pill { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,.14); border-radius: 12px; padding: 2px 10px; white-space: nowrap; }
+  .pill.pop { animation: pop .35s; }
+  @keyframes pop { 50% { transform: scale(1.25); background: #ffc93c; color: #1b2a41; } }
+  .tbar { width: 80px; height: 10px; background: rgba(255,255,255,.25); border-radius: 6px; overflow: hidden; }
+  .tbar i { display: block; height: 100%; background: #7be495; }
+  #chips { flex: 1; display: flex; gap: 6px; justify-content: center; min-width: 0; }
+  .chip { display: flex; align-items: center; gap: 5px; background: #fff; color: #1b2a41; border-radius: 12px; padding: 2px 8px; font-size: 18px; white-space: nowrap; }
+  .chip.empty { opacity: .3; }
+  .chip.hurry { background: #ff9d94; animation: shake .3s infinite; }
+  .chip .pb { width: 36px; }
+  .pb { height: 10px; border: 2px solid #1b2a41; border-radius: 6px; overflow: hidden; background: #fff; }
+  .pb i { display: block; height: 100%; width: 100%; background: #2ecc71; }
+  @media (max-width: 800px) { .tbar { display: none; } #hud { font-size: 17px; gap: 5px; } .pill { padding: 2px 6px; } .chip .pb { width: 24px; } }
+
+  /* ---------- restaurant ---------- */
+  #room { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #f1cd92; }
+  #stage { position: absolute; left: 0; top: 0; width: 1000px; height: 600px; transform-origin: 0 0; overflow: hidden; background: repeating-conic-gradient(#f8dfb3 0 25%, #f1cd92 0 50%) 0 0 / 100px 100px; }
+  .wall { position: absolute; left: 0; top: 0; width: 100%; height: 124px; background: repeating-linear-gradient(90deg, #ff8a5c 0 40px, #ffa37d 40px 80px); border-bottom: 4px solid #1b2a41; }
+  .counter { position: absolute; left: 322px; right: -6px; top: 124px; height: 48px; background: linear-gradient(#e0ad76 0 32%, #a9713f 32%); border: 4px solid #1b2a41; border-radius: 12px 0 0 12px; }
+  .stn { position: absolute; top: 24px; width: 100px; height: 116px; border: 4px solid #1b2a41; border-radius: 14px; background: #fff7e3; box-shadow: 0 4px 0 #1b2a41; font: 800 15px 'Baloo 2', sans-serif; cursor: pointer; padding: 0; z-index: 2; }
+  .stn i { display: block; font-style: normal; font-size: 50px; line-height: 1.15; }
+  .stn.glow { background: #ffe066; animation: bob .7s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  .stn.work i { animation: cook .12s linear infinite alternate; }
+  .stn.work::after { content: '💨'; position: absolute; left: 32px; top: -10px; font-size: 30px; animation: steam .6s linear infinite; }
+  @keyframes cook { from { transform: rotate(-9deg); } to { transform: rotate(9deg) translateY(-4px); } }
+  @keyframes steam { from { transform: translateY(0) scale(.6); opacity: 1; } to { transform: translateY(-36px) scale(1.4); opacity: 0; } }
+  #rail { position: absolute; left: 8px; top: 8px; width: 304px; height: 154px; background: #5b3a1e; border: 4px solid #1b2a41; border-radius: 12px; padding: 0 6px; color: #ffe066; font-size: 13px; font-weight: 800; letter-spacing: 2px; z-index: 2; }
+  #tickets { display: flex; gap: 6px; }
+  .tk { width: 92px; height: 118px; background: #fffdf5; border: 3px solid #1b2a41; border-radius: 4px 4px 12px 12px; font: 800 15px 'Baloo 2', sans-serif; cursor: pointer; padding: 2px 5px; letter-spacing: 0; animation: pulse .7s ease-in-out infinite alternate; }
+  .tk i { display: block; font-style: normal; font-size: 44px; line-height: 1.15; }
+  .tk .pb i { font-size: 0; }
+  .tk.q { animation: none; background: #d8f5df; }
+  @keyframes pulse { to { transform: scale(1.07) rotate(-2deg); } }
+  .door { position: absolute; left: -8px; top: 250px; font-size: 100px; line-height: 1; }
+  .decor { position: absolute; font-size: 56px; line-height: 1; }
+  .table { position: absolute; width: 160px; height: 70px; border-radius: 50%; background: radial-gradient(ellipse at 50% 30%, #f0bf8a, #b97b45); border: 4px solid #1b2a41; box-shadow: 0 9px 0 -1px #7a4a22, 0 12px 0 0 #1b2a41; text-align: center; }
+  .table .food { display: inline-block; font-size: 42px; line-height: 60px; }
+  .table em { position: absolute; right: 8px; bottom: -8px; font-style: normal; font-weight: 800; font-size: 16px; background: #fff; border: 3px solid #1b2a41; border-radius: 50%; width: 30px; height: 30px; line-height: 24px; }
+  .ent { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+  .ent .hit { position: absolute; left: -58px; bottom: -14px; width: 116px; height: 180px; cursor: pointer; }
+  .ent.chef .hit { display: none; }
+  .fig { position: absolute; left: -36px; bottom: 0; width: 72px; text-align: center; transform-origin: 50% 100%; pointer-events: none; }
+  .fig .head { display: block; font-size: 48px; line-height: 1; }
+  .chef .fig .head { font-size: 64px; }
+  .chef .fig .torso { display: none; }
+  .fig .torso { display: block; width: 40px; height: 26px; margin: -7px auto 0; border: 3px solid #1b2a41; border-radius: 14px 14px 7px 7px; }
+  .fig .carry { display: block; font-size: 38px; line-height: 1; height: 0; position: relative; top: -40px; }
+  .ent.walk .fig { animation: waddle .26s ease-in-out infinite alternate; }
+  @keyframes waddle { from { transform: rotate(-7deg); } to { transform: rotate(7deg) translateY(-5px); } }
+  .ent.eat .fig { animation: nom .22s ease-in-out infinite alternate; }
+  @keyframes nom { to { transform: translateY(5px) scale(1.04, .96); } }
+  .ent.work .fig { animation: cook .12s linear infinite alternate; }
+  .bub { position: absolute; left: -36px; bottom: 82px; width: 72px; background: #fff; border: 3px solid #1b2a41; border-radius: 16px; text-align: center; font-size: 28px; line-height: 1.15; padding: 0 5px 4px; pointer-events: none; animation: bob .9s ease-in-out infinite; box-shadow: 0 3px 0 rgba(27,42,65,.3); }
+  .ent.q .bub { background: #d8f5df; animation: none; }
+  .ent.hurry .bub { background: #ff9d94; animation: shake .3s infinite; }
+  .float { position: absolute; font-size: 30px; font-weight: 800; white-space: nowrap; pointer-events: none; z-index: 900; text-shadow: 0 0 5px #fff, 0 0 5px #fff, 0 0 5px #fff; animation: floatUp 1.4s ease-out forwards; }
+  @keyframes floatUp { to { transform: translateY(-90px); opacity: 0; } }
+  #hint { position: absolute; left: 0; right: 0; bottom: 0; pointer-events: none; transition: opacity .3s; }
+  #hint.off { opacity: 0; }
+  .how { display: flex; gap: 10px; justify-content: center; font-size: 17px; font-weight: 700; line-height: 1.2; }
+  .how div { flex: 1; } .how i { display: block; font-style: normal; font-size: 40px; }
+  #rStats { font-size: 24px; font-weight: 800; line-height: 1.5; }
+
+  /* ---------- overlays ---------- */
+  .overlay { position: absolute; inset: 0; display: none; z-index: 10; overflow-y: auto; }
+  .overlay.show { display: block; }
+  .center { min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 14px; text-align: center; }
+  #title, #result { z-index: 20; }
+  #title { background: repeating-linear-gradient(90deg, #ff8a5c 0 40px, #ffb38a 40px 80px); }
+  #result { background: rgba(27,42,65,.9); }
+  h1 { margin: 0; font-size: clamp(30px, 6vw, 54px); line-height: 1.05; color: #fff; text-shadow: 3px 3px 0 #1b2a41, -2px -2px 0 #1b2a41, 2px -2px 0 #1b2a41, -2px 2px 0 #1b2a41; }
+  .hero { font-size: 60px; line-height: 1; }
+  .card { background: #fff; border: 4px solid #1b2a41; border-radius: 16px; padding: 10px 14px; width: 100%; max-width: 780px; box-shadow: 0 4px 0 rgba(27,42,65,.3); }
+  .card h3 { margin: 0 0 6px; font-size: 19px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .opt { font: 800 18px 'Baloo 2', sans-serif; padding: 6px 12px; border-radius: 14px; border: 4px solid #1b2a41; background: #fff; cursor: pointer; line-height: 1.15; min-width: 120px; }
+  .opt small { display: block; font-size: 13px; font-weight: 700; color: #52647d; }
+  .opt i { font-style: normal; font-size: 34px; display: block; line-height: 1.1; }
+  .opt.sel { background: #ffc93c; }
+  .opt.mini { min-width: 0; font-size: 16px; border-width: 3px; padding: 4px 10px; }
+  .btn { font: 800 22px 'Baloo 2', sans-serif; padding: 8px 26px; border: 4px solid #1b2a41; border-radius: 14px; background: #2ecc71; color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.25); box-shadow: 0 5px 0 #1b2a41; cursor: pointer; }
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #1b2a41; }
+  .btn.alt { background: #3b82f6; }
+  a.menu { color: #1b2a41; font-weight: 700; font-size: 16px; }
+  #ver { font-size: 12px; font-weight: 700; opacity: .7; }
+  #medal { font-size: 80px; line-height: 1; }
+  #result h1 { font-size: clamp(26px, 5vw, 44px); }
+
+  /* ---------- close-up ---------- */
+  #close { top: 54px; background: rgba(27,42,65,.55); padding: 6px; }
+  .cu { min-height: 100%; display: flex; flex-direction: column; background: #fbe6c2; border: 4px solid #1b2a41; border-radius: 16px; overflow: hidden; }
+  .cuHead { flex: none; display: flex; align-items: center; gap: 10px; background: #1b2a41; color: #fff; padding: 4px 10px; font-size: 20px; font-weight: 800; }
+  .cuHead span:first-child { flex: 1; }
+  #work { flex: 1; min-height: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; padding: 4px 10px; }
+  #work.locked { pointer-events: none; }
+  #foot { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px; min-height: 76px; }
+  #fb { flex: 1; border: 4px solid #1b2a41; border-radius: 14px; padding: 6px 12px; font-size: clamp(16px, 2.2vw, 20px); font-weight: 700; line-height: 1.25; visibility: hidden; }
+  #fb.good { visibility: visible; background: #d8f5df; } #fb.bad { visibility: visible; background: #ffe3e0; } #fb.info { visibility: visible; background: #fff7d6; }
+  .visual { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; }
+  .visual figure { margin: 0; text-align: center; font-size: 19px; font-weight: 800; }
+  .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .opts.one { grid-template-columns: repeat(4, 1fr); }
+  .opts.three { grid-template-columns: repeat(3, 1fr); }
+  .ans { font: 800 clamp(22px, 3.2vw, 32px) 'Baloo 2', sans-serif; min-width: 160px; padding: 12px 18px; border: 4px solid #1b2a41; border-radius: 14px; background: #fff; box-shadow: 0 4px 0 #1b2a41; cursor: pointer; line-height: 1.15; }
+  .ans small { display: block; font-size: 15px; color: #52647d; }
+  .ans i { font-style: normal; font-size: 40px; display: block; line-height: 1.1; }
+  .ans.right { background: #7be495; } .ans.wrong { background: #ff9d94; opacity: .7; }
+  .ans svg { display: block; margin: 0 auto; }
+  svg.clock { width: min(42vh, 44vw, 330px); height: auto; touch-action: none; }
+  svg.clock.small { width: min(26vh, 30vw, 200px); }
+  svg.dial { width: min(46vh, 44vw, 350px); height: auto; }
+  svg.tank { width: min(38vh, 34vw, 290px); height: auto; }
+  svg.ruler { width: 100%; max-width: 1000px; height: auto; touch-action: none; cursor: grab; }
+  svg.shape { width: min(38vh, 40vw, 300px); height: auto; }
+  svg.shape.bar { width: min(60vh, 56vw, 460px); }
+  svg.shape.pick { width: min(22vh, 24vw, 170px); }
+  svg.shape.tiny { width: min(13vh, 15vw, 96px); }
+  svg.shape.tap [data-i] { cursor: pointer; }
+  .needle { transition: transform .35s cubic-bezier(.3,1.6,.5,1); transform-origin: 150px 190px; }
+  .side { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+  .act { font: 800 20px 'Baloo 2', sans-serif; padding: 10px 16px; border: 4px solid #1b2a41; border-radius: 14px; background: #ffe066; box-shadow: 0 4px 0 #1b2a41; cursor: pointer; touch-action: none; }
+  .act:active, .act.down { transform: translateY(3px); box-shadow: 0 1px 0 #1b2a41; }
+  .act.out { background: #cfe0f5; }
+  .note { background: #fff; border: 4px dashed #1b2a41; border-radius: 12px; padding: 6px 12px; font-size: 20px; font-weight: 800; text-align: center; }
+  .shelf { width: 100%; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .cards, .slots { display: flex; gap: 12px; justify-content: center; align-items: stretch; flex-wrap: wrap; min-height: 96px; }
+  .slots { background: #b9895a; border: 4px solid #1b2a41; border-radius: 12px; padding: 10px 12px; align-items: center; }
+  .slots em { font-style: normal; font-weight: 800; color: #fff; font-size: 18px; }
+  .slot { min-width: 130px; min-height: 84px; border: 4px dashed #fff; border-radius: 14px; display: grid; place-items: center; color: #fff; font-size: 26px; font-weight: 800; }
+  .slot .ans { box-shadow: none; color: #1b2a41; }
+  .pad { display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; }
+  .pad button { height: 54px; font: 800 26px 'Baloo 2', sans-serif; border: 4px solid #1b2a41; border-radius: 12px; background: #fff; box-shadow: 0 3px 0 #1b2a41; cursor: pointer; }
+  .screen { font-size: 40px; font-weight: 800; background: #1b2a41; color: #7be495; border-radius: 12px; padding: 4px 16px; min-width: 210px; text-align: right; }
+  .shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="hud">
+    <div class="pill">⏱ <b id="hTime"></b><div class="tbar"><i id="hBar"></i></div></div>
+    <div class="pill" id="hCoinPill">🪙 <b id="hCoins">0</b></div>
+    <div class="pill">😊 <b id="hServed">0</b></div>
+    <div class="pill">😠 <b id="hLost">0</b></div>
+    <div id="chips"></div>
+    <button class="tool" id="muteBtn" title="Sound"></button><button class="tool" id="menuBtn" title="Menu">🏠</button>
+  </div>
+  <div id="room"><div id="stage"></div><div id="hint" class="bubble off"><span class="chef">👩‍🍳</span><div id="hintText"></div></div></div>
+
+  <div id="close" class="overlay"><div class="cu">
+    <div class="cuHead"><span id="cuStation"></span><span id="cuStep"></span></div>
+    <div class="bubble"><span class="chef">👩‍🍳</span><div id="cuPrompt"></div><button class="tool" id="sayBtn" title="Read it to me">🗣️</button></div>
+    <div id="work"></div>
+    <div id="foot"><div id="fb"></div><button class="btn" id="doneBtn">Done ✔</button><button class="btn alt" id="nextBtn">OK ➜</button></div>
+  </div></div>
+
+  <div id="title" class="overlay show"><div class="center">
+    <div class="hero">👩‍🍳🍜</div>
+    <h1>Chef in Math Kitchen</h1>
+    <div class="row" id="levels">
+      <button class="opt" data-lv="junior">Junior Chef<small>Clock in 5 minutes</small></button>
+      <button class="opt" data-lv="head">Head Chef<small>To the minute, h and min</small></button>
+    </div>
+    <div class="card how">
+      <div><i>✋</i>Tap a customer to take the order</div>
+      <div><i>🧾</i>Tap the order ticket to cook the dish</div>
+      <div><i>💵</i>Tap the customer again to bring the bill</div>
+      <div><i>😠</i>Be quick! Customers leave if they wait too long</div>
+    </div>
+    <button class="btn" id="startBtn">Open the restaurant ▶</button>
+    <div id="best" style="font-weight:800;font-size:18px"></div>
+    <a class="menu" href="../../index.html">← All simulations</a>
+    <div id="ver"></div>
+  </div></div>
+
+  <div id="result" class="overlay"><div class="center">
+    <div id="medal"></div>
+    <h1 id="rTitle"></h1>
+    <div class="card"><div id="rStats"></div></div>
+    <div class="row"><button class="btn" id="againBtn">Open again ▶</button><button class="btn alt" id="rMenuBtn">Menu</button></div>
+  </div></div>
+</div>
+
+<script>
+'use strict';
+const APP_VERSION = 'v2';
+const SAVE_KEY = 'chefMathKitchen.v1';
+const $ = id => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[rnd(0, a.length - 1)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(0, i); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const distinct = (n, gen) => { const s = new Set(); while (s.size < n) s.add(gen()); return [...s]; };
+
+let save = { best: {}, muted: false, level: 'junior' };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && s.best) save = Object.assign(save, s); } catch (e) {}
+const persist = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} };
+
+/* ---------- sound and speech ---------- */
+let actx = null;
+function beep(freq, at = 0, dur = .12, type = 'triangle', vol = .08) {
+  if (save.muted) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + at;
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+  } catch (e) {}
+}
+const sfxGood = () => [523, 659, 784, 1047].forEach((f, i) => beep(f, i * .08));
+const sfxBad = () => { beep(196, 0, .2, 'sawtooth', .05); beep(147, .12, .25, 'sawtooth', .05); };
+const sfxTap = () => beep(880, 0, .04, 'square', .03);
+const sfxBell = () => { beep(1319, 0, .25, 'sine', .07); beep(1047, .16, .35, 'sine', .07); };
+const sfxCoin = () => { beep(988, 0, .08, 'square', .04); beep(1319, .08, .3, 'square', .04); };
+const sfxWarn = () => { beep(440, 0, .1, 'square', .04); beep(440, .16, .1, 'square', .04); };
+const sfxSizzle = () => { for (let i = 0; i < 16; i++) beep(2500 + Math.random() * 3500, i * .06, .05, 'sawtooth', .012); };
+const sfxServe = () => [523, 659, 784, 659, 784, 1047, 1319].forEach((f, i) => beep(f, i * .1, .16));
+const hush = () => { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} };
+function speak(text) {
+  if (save.muted || !window.speechSynthesis) return;
+  try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'en-GB'; u.rate = .9; speechSynthesis.speak(u); } catch (e) {}
+}
+
+/* ---------- words, fractions and time ---------- */
+const FR = ['', '', 'half', 'third', 'quarter', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth'];
+const frWords = (n, d) => `${n} ${d === 2 ? (n === 1 ? 'half' : 'halves') : FR[d] + (n === 1 ? '' : 's')}`;
+const frac = (n, d) => `<span class="fr"><b>${n}</b><b>${d}</b></span>`;
+// Text uses {3/8} for a fraction; html() draws it, say() reads it aloud.
+const html = s => s.replace(/\{(\d+)\/(\d+)\}/g, (_, n, d) => frac(n, d));
+const say = s => s.replace(/<[^>]+>/g, ' ').replace(/\{(\d+)\/(\d+)\}/g, (_, n, d) => frWords(+n, +d))
+  .replace(/(\d+)\.(\d\d) (am|pm)/g, (_, h, m, a) => `${h} ${m === '00' ? "o'clock" : m[0] === '0' ? 'oh ' + m[1] : m} ${a === 'am' ? 'a.m.' : 'p.m.'}`)
+  .replace(/(\d) kg\b/g, '$1 kilograms').replace(/(\d) g\b/g, '$1 grams').replace(/(\d) ℓ/g, '$1 litres').replace(/(\d) m\b/g, '$1 metres')
+  .replace(/(\d) h\b/g, '$1 hours').replace(/\bmin\b/g, 'minutes').replace(/[^\x00-\x7F]+/g, ' ');
+
+const f12 = (h, m, ap) => `${h}.${String(m).padStart(2, '0')} ${ap}`;
+const h12 = t => Math.floor(t / 60) % 12 || 12;
+const apOf = t => t % 1440 < 720 ? 'am' : 'pm';
+const fmtT = t => f12(h12(t), t % 60, apOf(t));
+const fmtDur = d => d < 60 ? `${d} min` : d % 60 ? `${Math.floor(d / 60)} h ${d % 60} min` : `${d / 60} h`;
+const MEALS = {
+  breakfast: { name: 'breakfast', icon: '🌅', when: 'in the morning', hours: [6, 7, 8, 9] },
+  lunch: { name: 'lunch', icon: '☀️', when: 'in the afternoon', hours: [13, 14] },
+  tea: { name: 'tea', icon: '☀️', when: 'in the afternoon', hours: [15, 16] },
+  dinner: { name: 'dinner', icon: '🌙', when: 'in the evening', hours: [17, 18, 19, 20] }
+};
+const mealNow = () => MEALS[G ? G.meal : 'lunch'];
+const whenOf = t => t < 720 ? 'in the morning' : t < 1020 ? 'in the afternoon' : 'in the evening';
+const kitchenTime = () => pick(mealNow().hours) * 60 + (level === 'head' ? rnd(1, 59) : rnd(0, 11) * 5);
+
+function clockSVG(t, cls = '') {
+  let s = `<svg class="clock ${cls}" viewBox="0 0 300 300"><circle cx="150" cy="150" r="142" fill="#ffc93c" stroke="#1b2a41" stroke-width="5"/><circle cx="150" cy="150" r="128" fill="#fff" stroke="#1b2a41" stroke-width="3"/>`;
+  for (let i = 0; i < 60; i++) s += `<line x1="150" y1="24" x2="150" y2="${i % 5 ? 31 : 38}" stroke="#1b2a41" stroke-width="${i % 5 ? 2 : 4}" transform="rotate(${i * 6} 150 150)"/>`;
+  for (let n = 1; n <= 12; n++) { const a = n * Math.PI / 6; s += `<text x="${150 + 96 * Math.sin(a)}" y="${150 - 96 * Math.cos(a) + 9}" text-anchor="middle" font-size="26" font-weight="800" fill="#1b2a41">${n}</text>`; }
+  s += `<line class="hh" x1="150" y1="150" x2="150" y2="88" stroke="#1b2a41" stroke-width="10" stroke-linecap="round"/><line class="mh" x1="150" y1="150" x2="150" y2="42" stroke="#e74c3c" stroke-width="6" stroke-linecap="round"/><circle cx="150" cy="150" r="9" fill="#1b2a41"/></svg>`;
+  return setHands(s, t);
+}
+function setHands(svg, t) {
+  const hA = (t / 60 % 12) * 30, mA = (t % 60) * 6;
+  if (typeof svg === 'string') return svg.replace('class="hh"', `class="hh" transform="rotate(${hA} 150 150)"`).replace('class="mh"', `class="mh" transform="rotate(${mA} 150 150)"`);
+  svg.querySelector('.hh').setAttribute('transform', `rotate(${hA} 150 150)`);
+  svg.querySelector('.mh').setAttribute('transform', `rotate(${mA} 150 150)`);
+}
+function clockExplain(t) {
+  const h = h12(t), m = t % 60;
+  if (m === 0) return `The long hand points to 12, so it is exactly ${h} o'clock.`;
+  const five = Math.floor(m / 5), at = five || 12;
+  return `The short hand has passed ${h}${m > 30 ? ` but has not reached ${h % 12 + 1}` : ''}, so the hour is ${h}. ` +
+    (m % 5 === 0 ? `The long hand points to ${at}. Count in fives: ${m} minutes.` : `The long hand is ${m % 5} small mark${m % 5 > 1 ? 's' : ''} past the ${at}: ${five * 5} + ${m % 5} = ${m} minutes.`);
+}
+
+/* ---------- shapes for fractions ---------- */
+const equalBounds = n => Array.from({ length: n + 1 }, (_, i) => i / n);
+function unequalBounds(n) {
+  for (;;) {
+    const w = Array.from({ length: n }, () => .35 + Math.random() * 1.3), sum = w.reduce((a, b) => a + b);
+    if (Math.max(...w) / Math.min(...w) < 2) continue;
+    let acc = 0; return [0, ...w.map(x => acc += x / sum)];
+  }
+}
+function pieSVG(bounds, shaded, cls) {
+  const n = bounds.length - 1, P = f => `${(100 + 90 * Math.sin(f * 2 * Math.PI)).toFixed(1)} ${(100 - 90 * Math.cos(f * 2 * Math.PI)).toFixed(1)}`;
+  let s = `<svg class="shape pie ${cls}" viewBox="0 0 200 200">`;
+  for (let i = 0; i < n; i++) s += `<path data-i="${i}" d="M100 100 L${P(bounds[i])} A90 90 0 ${bounds[i + 1] - bounds[i] > .5 ? 1 : 0} 1 ${P(bounds[i + 1])} Z" fill="${shaded.has(i) ? '#6cc04a' : '#fff6dd'}" stroke="#1b2a41" stroke-width="4" stroke-linejoin="round"/>`;
+  return s + '</svg>';
+}
+function barSVG(bounds, shaded, cls, rows) {
+  const n = bounds.length - 1, cols = n / rows;
+  let s = `<svg class="shape bar ${cls}" viewBox="0 0 308 ${rows === 2 ? 168 : 108}">`;
+  for (let i = 0; i < n; i++) {
+    const r = Math.floor(i / cols), c = i % cols, x0 = rows === 1 ? bounds[i] : c / cols, x1 = rows === 1 ? bounds[i + 1] : (c + 1) / cols;
+    s += `<rect data-i="${i}" x="${4 + 300 * x0}" y="${4 + r * 80}" width="${300 * (x1 - x0)}" height="${rows === 2 ? 80 : 100}" fill="${shaded.has(i) ? '#6cc04a' : '#fff6dd'}" stroke="#1b2a41" stroke-width="4" stroke-linejoin="round"/>`;
+  }
+  return s + '</svg>';
+}
+// shape: 'pie' (a round cake) or 'bar' (a tray of kueh). count = how many parts are coloured.
+function shapeSVG(shape, d, count = 0, cls = '', bounds, oneRow) {
+  const shaded = new Set(Array.from({ length: count }, (_, i) => i));
+  bounds = bounds || equalBounds(d);
+  return shape === 'pie' ? pieSVG(bounds, shaded, cls) : barSVG(bounds, shaded, cls, !oneRow && d % 2 === 0 && d >= 6 ? 2 : 1);
+}
+const dens = () => level === 'head' ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [2, 3, 4, 5, 6, 8];
+const FOOD = { pie: ['pandan cake', 'round cake'], bar: ['tray of kueh', 'tray of kueh lapis'] };
+
+/* ---------- question helpers ---------- */
+function mkOpts(correct, cands, n = 4) {
+  const out = [correct];
+  for (const c of cands) if (out.length < n && !out.includes(c)) out.push(c);
+  return shuffle(out).map(x => ({ html: html(x), ok: x === correct }));
+}
+
+/* ---------- the stations ---------- */
+const KINDS = {
+  // Order window: read the clock on the ticket and decide am or pm.
+  ticket() {
+    const meal = mealNow(), t = pick(meal.hours) * 60 + (level === 'head' ? rnd(1, 59) : rnd(0, 11) * 5);
+    const h = h12(t), m = t % 60, ap = apOf(t), other = ap === 'am' ? 'pm' : 'am';
+    const sh = Math.round(m / 5) % 12 || 12, sm = h % 12 * 5;
+    return {
+      prompt: `The customer wants ${dish ? dish.name : 'a meal'} for <b>${meal.name}</b> ${meal.icon}. Look at the clock. What time do you write on the order?`,
+      visual: clockSVG(t),
+      options: mkOpts(f12(h, m, ap), [f12(h, m, other), f12(sh, sm, ap), f12(h % 12 + 1, m, ap), f12(sh, sm, other), f12(h === 1 ? 12 : h - 1, m, ap)]),
+      hint: 'Look again. The short hand shows the hour. Is this meal in the morning, or after noon?',
+      explain: `${clockExplain(t)} ${meal.name[0].toUpperCase() + meal.name.slice(1)} is ${meal.when}, so it is <b>${fmtT(t)}</b>.`
+    };
+  },
+
+  // Pantry: choose the sensible unit.
+  unit() {
+    const [text, ans, why] = pick([
+      ['A sack of rice 🌾 has a mass of 5 __.', 'kg', 'A sack of rice is heavy, so we use kilograms (kg).'],
+      ['A watermelon 🍉 has a mass of 3 __.', 'kg', 'A watermelon is heavy, so we use kilograms (kg).'],
+      ['A whole chicken 🍗 has a mass of 2 __.', 'kg', 'A chicken is quite heavy, so we use kilograms (kg).'],
+      ['One egg 🥚 has a mass of 60 __.', 'g', 'An egg is light, so we use grams (g).'],
+      ['A chilli 🌶️ has a mass of 20 __.', 'g', 'A chilli is very light, so we use grams (g).'],
+      ['A slice of bread 🍞 has a mass of 30 __.', 'g', 'A slice of bread is light, so we use grams (g).'],
+      ['A big pot of soup 🍲 holds 8 __.', 'ℓ', 'Soup is a liquid. We measure liquids in litres (ℓ).'],
+      ['A bottle of cooking oil holds 2 __.', 'ℓ', 'Oil is a liquid. We measure liquids in litres (ℓ).'],
+      ['A pail of water 🪣 holds 10 __.', 'ℓ', 'Water is a liquid. We measure liquids in litres (ℓ).'],
+      ['The kitchen table is 2 __ long.', 'm', 'How long something is, is its length. We use metres (m).'],
+      ['The kitchen is 6 __ wide.', 'm', 'How wide something is, is a length. We use metres (m).'],
+      ['Chef pulls a noodle 🍜 that is 4 __ long.', 'm', 'How long something is, is its length. We use metres (m).']
+    ]);
+    const names = { g: 'grams', kg: 'kilograms', 'ℓ': 'litres', m: 'metres' };
+    return {
+      prompt: `Chef is checking the pantry list. Which unit fits?<br><b>${text}</b>`,
+      options: Object.keys(names).map(u => ({ html: `${u}<small>${names[u]}</small>`, ok: u === ans })),
+      hint: 'Think: is it a mass (g, kg), a liquid (ℓ) or a length (m)?',
+      explain: `${why} ${text.replace('__', `<b>${ans}</b>`)}`
+    };
+  },
+
+  // Scale: scoop food to a target mass, or read the dial.
+  weigh(p) {
+    const mode = p.mode || pick(['make', 'read']), unit = p.unit || pick(['g', 'kg']), head = level === 'head';
+    const c = unit === 'g' ? { max: 1000, tick: head ? 10 : 50, major: 100, big: 100 } : { max: head ? 20 : 10, tick: 1, major: head ? 5 : 1, big: head ? 5 : 1 };
+    const target = unit === 'g' ? rnd(3, 18) * 50 + (head ? rnd(1, 4) * 10 : 0) : rnd(2, c.max - 1);
+    const [what, food] = p.what || pick(unit === 'g' ? [['flour', '🌾'], ['sugar', '🧂'], ['peanuts', '🥜'], ['ikan bilis', '🐟']] : [['rice', '🍚'], ['potatoes', '🥔'], ['onions', '🧅'], ['flour', '🌾']]);
+    const tickText = `Each small mark is ${c.tick} ${unit}.`;
+    const dial = v => {
+      const A = x => -135 + 270 * x / c.max;
+      let s = `<svg class="dial" viewBox="0 0 300 326"><rect x="55" y="40" width="190" height="12" rx="6" fill="#9aa7b8" stroke="#1b2a41" stroke-width="3"/><rect x="140" y="50" width="20" height="16" fill="#9aa7b8" stroke="#1b2a41" stroke-width="3"/><text class="pile" x="150" y="38" text-anchor="middle"></text><circle cx="150" cy="190" r="130" fill="#e74c3c" stroke="#1b2a41" stroke-width="4"/><circle cx="150" cy="190" r="114" fill="#fff" stroke="#1b2a41" stroke-width="3"/>`;
+      for (let x = 0; x <= c.max; x += c.tick) {
+        const maj = x % c.major === 0, mid = x % (c.major / 2) === 0, a = A(x) * Math.PI / 180;
+        s += `<line x1="150" y1="78" x2="150" y2="${maj ? 96 : mid ? 90 : 85}" stroke="#1b2a41" stroke-width="${maj ? 3 : 1.5}" transform="rotate(${A(x)} 150 190)"/>`;
+        if (maj) s += `<text x="${150 + 79 * Math.sin(a)}" y="${190 - 79 * Math.cos(a) + 5}" text-anchor="middle" font-size="${c.max === 1000 ? 14 : 17}" font-weight="800" fill="#1b2a41">${x}</text>`;
+      }
+      return s + `<text x="150" y="262" text-anchor="middle" font-size="26" font-weight="800" fill="#c0392b">${unit}</text><g class="needle"><line x1="150" y1="204" x2="150" y2="84" stroke="#1b2a41" stroke-width="5" stroke-linecap="round"/></g><circle cx="150" cy="190" r="10" fill="#1b2a41"/></svg>`;
+    };
+    const show = (el, v) => {
+      el.querySelector('.needle').style.transform = `rotate(${-135 + 270 * v / c.max}deg)`;
+      const pile = el.querySelector('.pile'); pile.textContent = v > 0 ? food : ''; pile.setAttribute('font-size', 16 + 26 * v / c.max);
+    };
+    if (mode === 'read') {
+      return {
+        prompt: `A delivery of ${what} ${food} is on the scale. What is its mass?`,
+        visual: dial(target), after: el => show(el, target),
+        options: mkOpts(`${target} ${unit}`, shuffle([target + c.tick, target - c.tick, target + 2 * c.tick, target - 2 * c.tick, target + c.major]).filter(v => v > 0 && v <= c.max).map(v => `${v} ${unit}`)),
+        hint: `Look at the two numbers beside the needle. ${tickText}`,
+        explain: `${tickText} The needle points to <b>${target} ${unit}</b>.`
+      };
+    }
+    let val = 0, root;
+    const add = d => { val = clamp(val + d, 0, c.max); show(root, val); sfxTap(); };
+    return {
+      prompt: `Scoop <b>${target} ${unit}</b> of ${what} ${food} onto the scale.`,
+      mount(el) {
+        const small = c.big === c.tick ? '' : `<button class="act" data-d="${c.tick}">Small scoop +${c.tick} ${unit}</button>`;
+        el.innerHTML = dial(0) + `<div class="side"><button class="act" data-d="${c.big}">Big scoop +${c.big} ${unit}</button>${small}<button class="act out" data-d="${-c.tick}">Take out −${c.tick} ${unit}</button>${c.big === c.tick ? '' : `<button class="act out" data-d="${-c.big}">Take out −${c.big} ${unit}</button>`}</div>`;
+        root = el; show(el, 0);
+        el.querySelectorAll('.act').forEach(b => b.onclick = () => add(+b.dataset.d));
+      },
+      check: () => ({ ok: val === target, hint: `${val < target ? 'Not enough yet.' : 'Too much!'} The needle must point to ${target} ${unit}. ${tickText}` }),
+      reveal() { val = target; show(root, val); },
+      explain: `${tickText} The needle points to <b>${target} ${unit}</b>.`
+    };
+  },
+
+  // Tank: hold to pour litres, or read the level.
+  pour(p) {
+    const mode = p.mode || pick(['make', 'read']), head = level === 'head', target = rnd(2, 9);
+    const [what, col] = p.what || pick([['curry', '#e6952e'], ['soup', '#e9c46a'], ['coconut milk', '#f3f0e6'], ['soya milk', '#f1e3c4'], ['water', '#7cc6f2']]);
+    const tank = v => {
+      let s = `<svg class="tank" viewBox="0 0 250 350"><rect x="70" y="20" width="140" height="310" fill="#fff"/><rect class="liq" x="72" y="${330 - v * 30}" width="136" height="${v * 30}" fill="${col}" stroke="#1b2a41" stroke-width="3"/><path d="M70 20 V330 H210 V20" fill="none" stroke="#1b2a41" stroke-width="6" stroke-linejoin="round"/>`;
+      for (let i = 1; i <= 10; i++) {
+        const lab = !head || i % 2 === 0;
+        s += `<line x1="70" y1="${330 - i * 30}" x2="${lab ? 104 : 92}" y2="${330 - i * 30}" stroke="#1b2a41" stroke-width="3"/>`;
+        if (lab) s += `<text x="60" y="${337 - i * 30}" text-anchor="end" font-size="20" font-weight="800" fill="#1b2a41">${i} ℓ</text>`;
+      }
+      return s + '</svg>';
+    };
+    if (mode === 'read') {
+      return {
+        prompt: `How much ${what} is in the tank?`,
+        visual: tank(target),
+        options: mkOpts(`${target} ℓ`, shuffle([target + 1, target - 1, target + 2, target - 2]).filter(v => v > 0 && v <= 10).map(v => `${v} ℓ`)),
+        hint: 'Find the mark that lines up with the top of the liquid.',
+        explain: `The top of the ${what} is at the ${target} ℓ mark, so there are <b>${target} ℓ</b>.`
+      };
+    }
+    let val = 0, dir = 0, timer, liq;
+    const draw = () => { liq.setAttribute('y', 330 - val * 30); liq.setAttribute('height', val * 30); };
+    const tick = () => { if (dir) { val = clamp(val + dir * 1.1 * .03, 0, 10); draw(); } };
+    return {
+      prompt: `Pour <b>${target} ℓ</b> of ${what} into the tank. Hold the button to pour.`,
+      mount(el) {
+        el.innerHTML = tank(0) + `<div class="side"><button class="act" id="pIn">🥛 Hold to pour in</button><button class="act out" id="pOut">Hold to pour out</button></div>`;
+        liq = el.querySelector('.liq');
+        [['pIn', 1], ['pOut', -1]].forEach(([id, d]) => {
+          const b = el.querySelector('#' + id);
+          b.addEventListener('pointerdown', e => { e.preventDefault(); try { b.setPointerCapture(e.pointerId); } catch (err) {} dir = d; b.classList.add('down'); });
+          ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { dir = 0; b.classList.remove('down'); }));
+        });
+        timer = setInterval(tick, 30);
+      },
+      check() {
+        if (Math.abs(val - target) <= .3) { val = target; draw(); return { ok: true }; }
+        return { ok: false, hint: `${val < target ? 'Not enough yet.' : 'Too much! Pour some out.'} The top must reach the ${target} ℓ mark.` };
+      },
+      reveal() { val = target; draw(); },
+      cleanup() { clearInterval(timer); },
+      explain: `The top of the ${what} is at the ${target} ℓ mark, so there are <b>${target} ℓ</b>.`
+    };
+  },
+
+  // Noodle bench: drag the noodle along a metre ruler.
+  stretch() {
+    const start = level === 'head' ? rnd(1, 3) : 0, target = rnd(2, 10 - start - (start ? 0 : 1));
+    let end = start, svg, drag = false;
+    const X = m => 40 + 88 * m;
+    const draw = () => {
+      svg.querySelectorAll('.nd').forEach(l => l.setAttribute('x2', X(end)));
+      svg.querySelector('.hand').setAttribute('transform', `translate(${X(end)} 80)`);
+    };
+    const move = e => { const r = svg.getBoundingClientRect(); end = clamp(((e.clientX - r.left) / r.width * 1000 - 40) / 88, start, 10); draw(); };
+    return {
+      prompt: start ? `The noodle starts at the <b>${start} m</b> mark. Pull it until the noodle is <b>${target} m</b> long.` : `Pull the la mian noodle until it is <b>${target} m</b> long.`,
+      mount(el) {
+        let s = `<svg class="ruler" viewBox="0 0 1000 250"><rect x="20" y="150" width="972" height="70" rx="8" fill="#ffe066" stroke="#1b2a41" stroke-width="4"/>`;
+        for (let i = 0; i <= 20; i++) s += `<line x1="${X(i / 2)}" y1="150" x2="${X(i / 2)}" y2="${i % 2 ? 165 : 178}" stroke="#1b2a41" stroke-width="${i % 2 ? 2 : 4}"/>`;
+        for (let i = 0; i <= 10; i++) s += `<text x="${X(i)}" y="208" text-anchor="middle" font-size="26" font-weight="800" fill="#1b2a41">${i}</text>`;
+        s += `<text x="982" y="208" text-anchor="end" font-size="24" font-weight="800" fill="#c0392b">m</text>`;
+        s += `<line x1="${X(start)}" y1="60" x2="${X(start)}" y2="150" stroke="#1b2a41" stroke-width="3" stroke-dasharray="6 6"/>`;
+        s += `<line class="nd" x1="${X(start)}" y1="80" x2="${X(start)}" y2="80" stroke="#1b2a41" stroke-width="30" stroke-linecap="round"/><line class="nd" x1="${X(start)}" y1="80" x2="${X(start)}" y2="80" stroke="#f6d77a" stroke-width="20" stroke-linecap="round"/>`;
+        s += `<g class="hand"><line x1="0" y1="-20" x2="0" y2="70" stroke="#c0392b" stroke-width="3" stroke-dasharray="6 6"/><circle r="32" fill="#fff" stroke="#1b2a41" stroke-width="4"/><text y="13" text-anchor="middle" font-size="36">✋</text></g></svg>`;
+        el.innerHTML = s; svg = el.querySelector('svg'); draw();
+        svg.addEventListener('pointerdown', e => { e.preventDefault(); drag = true; try { svg.setPointerCapture(e.pointerId); } catch (err) {} move(e); });
+        svg.addEventListener('pointermove', e => { if (drag) move(e); });
+        ['pointerup', 'pointercancel'].forEach(ev => svg.addEventListener(ev, () => { if (!drag) return; drag = false; end = Math.round(end); draw(); sfxTap(); }));
+      },
+      check: () => ({ ok: Math.round(end) - start === target, hint: `${end - start < target ? 'Too short!' : 'Too long!'} ${start ? `Count the metres from the ${start} m mark.` : 'Look at the number under the end of the noodle.'}` }),
+      reveal() { end = start + target; draw(); },
+      explain: start ? `From the ${start} m mark to the ${start + target} m mark is ${start + target} − ${start} = <b>${target} m</b>.` : `The noodle goes from 0 to the ${target} m mark, so it is <b>${target} m</b> long.`
+    };
+  },
+
+  // Shelf (measures) or serving hatch (fractions): tap things into order.
+  order(p) {
+    const type = p.type || pick(['g', 'kg', 'l', 'm']), head = level === 'head', up = Math.random() < .5;
+    let items, thing, words, why;
+    if (type === 'frac') {
+      const pics = !head;
+      if (Math.random() < .5) {
+        items = distinct(3, () => pick(dens())).map(d => ({ v: 1 / d, html: frac(1, d) + (pics ? shapeSVG('pie', d, 1, 'tiny') : ''), t: `{1/${d}}` }));
+        why = 'The top numbers are all 1. A bigger bottom number means more parts, so each part is smaller.';
+      } else {
+        const d = pick(dens().filter(x => x >= 4));
+        items = distinct(3, () => rnd(1, d - 1)).map(n => ({ v: n / d, html: frac(n, d) + (pics ? shapeSVG('pie', d, n, 'tiny') : ''), t: `{${n}/${d}}` }));
+        why = 'The bottom numbers are the same, so just compare the top numbers.';
+      }
+      thing = 'plates of cake 🍰'; words = ['smallest', 'greatest'];
+    } else {
+      const T = {
+        g: ['bags of flour', '🛍️', 'g', ['lightest', 'heaviest'], () => head ? rnd(101, 999) : rnd(11, 99) * 10],
+        kg: ['sacks of rice', '🌾', 'kg', ['lightest', 'heaviest'], () => head ? rnd(10, 99) : rnd(1, 20)],
+        l: ['pots of soup', '🍲', 'ℓ', ['least', 'most'], () => head ? rnd(10, 99) : rnd(1, 20)],
+        m: ['noodles', '🍜', 'm', ['shortest', 'longest'], () => head ? rnd(10, 99) : rnd(1, 20)]
+      }[type];
+      let vals = distinct(3, T[4]);
+      if (type === 'g') { const a = rnd(1, 9), b = rnd(0, 9), c2 = head ? rnd(0, 9) : 0; const mix = [...new Set([a * 100 + b * 10 + c2, a * 100 + c2 * 10 + b, (b || a) * 100 + a * 10 + c2])]; if (mix.length === 3 && !head) vals = mix.map(v => Math.round(v / 10) * 10); if (mix.length === 3 && head) vals = mix; if (new Set(vals).size < 3) vals = distinct(3, T[4]); }
+      items = vals.map(v => ({ v, html: `<i>${T[1]}</i>${v} ${T[2]}`, t: `${v} ${T[2]}` }));
+      thing = `${T[0]} ${T[1]}`; words = T[3]; why = '';
+    }
+    const sorted = items.slice().sort((a, b) => up ? a.v - b.v : b.v - a.v), ends = up ? words : words.slice().reverse();
+    items = shuffle(items);
+    if (items.every((x, i) => x === sorted[i])) items.reverse();
+    let placed = [], root;
+    const draw = () => {
+      const card = (x, i) => `<button class="ans" data-i="${i}">${x.html}</button>`;
+      root.innerHTML = `<div class="shelf"><div class="cards">${items.map((x, i) => placed.includes(i) ? '' : card(x, i)).join('')}</div><div class="slots"><em>${ends[0]}</em>${items.map((_, k) => `<div class="slot">${placed[k] === undefined ? k + 1 : card(items[placed[k]], placed[k])}</div>`).join('')}<em>${ends[1]}</em></div></div>`;
+      root.querySelectorAll('.ans').forEach(b => b.onclick = () => { const i = +b.dataset.i; placed = placed.includes(i) ? placed.filter(x => x !== i) : [...placed, i]; sfxTap(); draw(); });
+    };
+    return {
+      station: type === 'frac' ? 'hatch' : 'shelf',
+      prompt: type === 'frac' ? `Three customers get different shares of the same cake. Tap the ${thing} in order from <b>${ends[0]}</b> to <b>${ends[1]}</b>.` : `Tidy the shelf! Tap the ${thing} in order from <b>${ends[0]}</b> to <b>${ends[1]}</b>.`,
+      mount(el) { root = el; draw(); },
+      check: () => placed.length < items.length ? { ok: null, hint: 'Put all three on the shelf first. Tap one to take it back.' } : { ok: placed.every((i, k) => items[i] === sorted[k]), hint: `Not quite. Which one is the ${ends[0]}? ${why}` },
+      reveal() { placed = sorted.map(x => items.indexOf(x)); draw(); },
+      explain: `${why} From ${ends[0]} to ${ends[1]}: <b>${sorted.map(x => x.t).join(', ')}</b>.`
+    };
+  },
+
+  // Cutting board: a fraction needs equal parts.
+  cut(p) {
+    const shape = p.shape || pick(['pie', 'bar']), n = pick(level === 'head' ? [3, 4, 5, 6, 8, 10, 12] : [2, 3, 4, 5, 6, 8]);
+    const other = pick([n - 1, n + 1, n + 2].filter(x => x >= 2));
+    const opts = shuffle([
+      { svg: shapeSVG(shape, n, 0, 'pick', null, true), ok: true },
+      { svg: shapeSVG(shape, n, 0, 'pick', unequalBounds(n), true), ok: false },
+      { svg: shapeSVG(shape, other, 0, 'pick', null, true), ok: false }
+    ]);
+    return {
+      prompt: `Chef needs the ${FOOD[shape][0]} cut into <b>${n} equal parts</b>. Which one is cut correctly?`,
+      options: opts.map(o => ({ html: o.svg, ok: o.ok })), optClass: 'three',
+      hint: `Count the parts. There must be ${n}, and they must all be the same size.`,
+      explain: `This one has <b>${n}</b> parts that are all the <b>same size</b>. Each part is {1/${n}} of the whole.`
+    };
+  },
+
+  // Cutting board: colour a fraction of the whole.
+  top(p) {
+    const shape = p.shape || pick(['pie', 'bar']), d = pick(dens().filter(x => x > 2)), n = rnd(1, d - 1);
+    let svg; const on = new Set();
+    const paint = () => svg.querySelectorAll('[data-i]').forEach(e => e.setAttribute('fill', on.has(+e.dataset.i) ? '#6cc04a' : '#fff6dd'));
+    return {
+      prompt: `Spread green kaya on {${n}/${d}} of the ${FOOD[shape][1]}. Tap the parts.`,
+      mount(el) {
+        el.innerHTML = shapeSVG(shape, d, 0, 'tap'); svg = el.querySelector('svg');
+        svg.addEventListener('click', e => { const i = e.target.dataset.i; if (i === undefined) return; on.has(+i) ? on.delete(+i) : on.add(+i); sfxTap(); paint(); });
+      },
+      check: () => ({ ok: on.size === n, hint: `You coloured ${on.size} part${on.size === 1 ? '' : 's'}. {${n}/${d}} means ${n} out of ${d} equal parts.` }),
+      reveal() { on.clear(); for (let i = 0; i < n; i++) on.add(i); paint(); },
+      explain: `There are ${d} equal parts and ${n} ${n === 1 ? 'is' : 'are'} green. That is <b>{${n}/${d}}</b>.`
+    };
+  },
+
+  // Cutting board: name the fraction shown.
+  name(p) {
+    const shape = p.shape || pick(['pie', 'bar']), d = pick(dens().filter(x => x > 2)), n = rnd(1, d - 1), F = (a, b) => `{${a}/${b}}`;
+    return {
+      prompt: `Some of the ${FOOD[shape][1]} has green kaya on it. What fraction is green?`,
+      visual: shapeSVG(shape, d, n),
+      options: mkOpts(F(n, d), [F(d - n, d), F(n, d - n), F(d, n), F(n, d + 1), F(n + 1, d), F(n, d + 2)]),
+      hint: 'Count all the equal parts for the bottom number. Count the green parts for the top number.',
+      explain: `There are ${d} equal parts, so the bottom number is ${d}. ${n} ${n === 1 ? 'part is' : 'parts are'} green, so the top number is ${n}: <b>{${n}/${d}}</b>.`
+    };
+  },
+
+  // Serving hatch: who gets more?
+  compare() {
+    const [a, b] = distinct(2, () => pick(['Ali', 'Mei Ling', 'Siti', 'Ravi', 'Ben', 'Priya', 'Hui Min', 'Arjun'])), more = Math.random() < .5, pics = level !== 'head';
+    let f, why;
+    if (Math.random() < .5) {
+      f = distinct(2, () => pick(dens())).map(d => [1, d]);
+      const [s, g] = f[0][1] < f[1][1] ? [f[1], f[0]] : [f[0], f[1]];
+      why = `Cutting a cake into more parts makes each part smaller. So {1/${g[1]}} is greater than {1/${s[1]}}.`;
+    } else {
+      const d = pick(dens().filter(x => x >= 3)); f = distinct(2, () => rnd(1, d - 1)).map(n => [n, d]);
+      const hi = Math.max(f[0][0], f[1][0]), lo = Math.min(f[0][0], f[1][0]);
+      why = `Both cakes are cut into ${d} equal parts, and ${hi} parts is more than ${lo} parts. So {${hi}/${d}} is greater than {${lo}/${d}}.`;
+    }
+    const v = f.map(x => x[0] / x[1]), win = (v[0] > v[1]) === more ? 0 : 1;
+    const pic = i => shapeSVG('pie', f[i][1], f[i][0], 'tiny');
+    return {
+      station: 'hatch', maxTries: 1,
+      prompt: `${a} gets {${f[0][0]}/${f[0][1]}} of a cake. ${b} gets {${f[1][0]}/${f[1][1]}} of a cake the same size. Who gets <b>${more ? 'more' : 'less'}</b>?`,
+      options: [a, b].map((nm, i) => ({ html: `<i>${i ? '🧒' : '👧'}</i>${nm}<br>${frac(f[i][0], f[i][1])}${pics ? pic(i) : ''}`, ok: i === win })),
+      explain: `${pics ? '' : `<span style="float:right">${pic(0)}${pic(1)}</span>`}${why} <b>${[a, b][win]}</b> gets ${more ? 'more' : 'less'}.`
+    };
+  },
+
+  // Oven timer: change hours and minutes to minutes, and back.
+  convert(p) {
+    const mode = p.mode || pick(['toMin', 'toHM']), h = pick([1, 1, 1, 2, 2, 3]), m = rnd(1, 11) * 5, total = h * 60 + m;
+    if (mode === 'toHM') {
+      return {
+        prompt: p.ctx === 'bill' ? `The customer stayed for <b>${total} min</b>. How long is that in hours and minutes?` : `The oven timer shows <b>${total} min</b>. How long is that in hours and minutes?`,
+        visual: `<div class="screen">${total} min</div>`,
+        options: mkOpts(`${h} h ${m} min`, [`${Math.floor(total / 10)} h ${total % 10} min`, `${h} h ${m + 10 > 55 ? m - 10 : m + 10} min`, `${h + 1} h ${m} min`, `${h} h ${m > 10 ? m - 5 : m + 5} min`].filter(x => !/ 0 min/.test(x))),
+        hint: 'Remember: 60 min = 1 h. How many 60s can you take out?',
+        explain: `60 min = 1 h, so ${h * 60} min = ${h} h. ${total} − ${h * 60} = ${m}. So ${total} min = <b>${h} h ${m} min</b>.`
+      };
+    }
+    let val = '', scr;
+    const draw = () => scr.textContent = (val || '_') + ' min';
+    return {
+      prompt: `The recipe says: cook for <b>${h} h ${m} min</b>. The oven timer only counts minutes. How many minutes is that?`,
+      mount(el) {
+        el.innerHTML = `<div class="side"><div class="note">${h} h ${m} min = ?</div><div class="screen"></div></div><div class="pad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '⌫', 0].map(k => `<button data-k="${k}">${k}</button>`).join('')}</div>`;
+        scr = el.querySelector('.screen'); draw();
+        el.querySelectorAll('.pad button').forEach(b => b.onclick = () => { const k = b.dataset.k; val = k === '⌫' ? val.slice(0, -1) : (val + k).slice(0, 3).replace(/^0/, ''); sfxTap(); draw(); });
+      },
+      check: () => val === '' ? { ok: null, hint: 'Type the number of minutes first.' } : { ok: +val === total, hint: `Remember: 1 h = 60 min. Start with ${h} h = ${h * 60} min, then add the ${m} min.` },
+      reveal() { val = String(total); draw(); },
+      explain: `1 h = 60 min, so ${h} h = ${h * 60} min. ${h * 60} + ${m} = <b>${total} min</b>.`
+    };
+  },
+
+  // Oven: move the clock hands to the finishing time.
+  clockSet() {
+    const head = level === 'head', dur = pick(head ? [20, 40, 45, 75, 90, 100] : [30, 60]);
+    const start = pick(mealNow().hours) * 60 + rnd(0, 11) * 5, target = start + dur;
+    const durText = head ? fmtDur(dur) : dur === 30 ? 'half an hour' : '1 hour';
+    let t = start, svg, drag = false;
+    const draw = () => setHands(svg, t);
+    const move = e => {
+      const r = svg.getBoundingClientRect(), a = Math.atan2(e.clientX - (r.left + r.width / 2), -(e.clientY - (r.top + r.height / 2)));
+      let d = (Math.round(((a * 180 / Math.PI + 360) % 360) / 30) * 5) % 60 - t % 60;
+      if (d > 30) d -= 60; if (d < -30) d += 60;
+      if (d) { t += d; draw(); }
+    };
+    return {
+      prompt: `The food goes into the oven at <b>${fmtT(start)}</b>. It cooks for <b>${durText}</b>. Move the red hand to show when it is ready.`,
+      mount(el) {
+        el.innerHTML = `<div class="side"><div class="note">In: ${fmtT(start)}<br>Cooks for: ${durText}</div><button class="act" data-d="5">+5 min ⟳</button><button class="act out" data-d="-5">⟲ −5 min</button></div>` + clockSVG(start);
+        svg = el.querySelector('svg.clock');
+        el.querySelectorAll('.act').forEach(b => b.onclick = () => { t += +b.dataset.d; sfxTap(); draw(); });
+        svg.addEventListener('pointerdown', e => { e.preventDefault(); drag = true; try { svg.setPointerCapture(e.pointerId); } catch (err) {} move(e); });
+        svg.addEventListener('pointermove', e => { if (drag) move(e); });
+        ['pointerup', 'pointercancel'].forEach(ev => svg.addEventListener(ev, () => drag = false));
+      },
+      check: () => ({ ok: t === target, hint: t === start ? 'Drag the red hand forward, or tap +5 min.' : dur === 30 ? 'Half an hour is 30 minutes. The long hand moves halfway round the clock.' : dur === 60 ? '1 hour is 60 minutes. The long hand goes all the way round once, and the short hand moves to the next number.' : `Count on ${durText} from ${fmtT(start)}. Each number on the clock is 5 minutes.` }),
+      reveal() { t = target; draw(); },
+      explain: `${fmtT(start)} and ${durText} later is <b>${fmtT(target)}</b>.${dur >= 60 && dur % 60 ? ` (${fmtT(start)} → ${fmtT(start + 60)} is 1 h, then ${dur - 60} min more.)` : ''}`
+    };
+  },
+
+  // Oven: read the kitchen clock.
+  readClock(p = {}) {
+    const t = kitchenTime(), h = h12(t), m = t % 60, ap = apOf(t), head = level === 'head', step = head ? 1 : 5;
+    const sh = Math.round(m / 5) % 12 || 12, sm = h % 12 * 5, mm = x => (x + 60) % 60;
+    return {
+      prompt: p.ctx === 'bill' ? `The customer is paying. Look at the clock. What time do you write on the bill, ${whenOf(t)}?` : `Ding! 🔔 Look at the kitchen clock. What time is it ${whenOf(t)}?`,
+      visual: clockSVG(t),
+      options: mkOpts(f12(h, m, ap), shuffle([f12(sh, sm, ap), f12(h % 12 + 1, m, ap), f12(h, mm(m + step), ap), f12(h, mm(m - step), ap), f12(h, mm(m + 5 * step), ap), f12(h === 1 ? 12 : h - 1, m, ap)])),
+      hint: 'The short hand shows the hour. The long red hand shows the minutes.',
+      explain: `${clockExplain(t)} The time is <b>${fmtT(t)}</b>.`
+    };
+  },
+
+  // Oven: how long did it cook?
+  duration(p = {}) {
+    const head = level === 'head', dur = pick(head ? [20, 25, 35, 40, 50, 65, 70, 80, 85, 95, 100, 110] : [30, 60, 120]);
+    const start = pick(mealNow().hours) * 60 + rnd(0, 11) * 5, end = start + dur;
+    const J = { 30: 'half an hour', 60: '1 hour', 120: '2 hours' };
+    const fig = (t, lab) => `<figure>${clockSVG(t, 'small')}<figcaption>${lab}</figcaption></figure>`;
+    const mid = start + Math.floor(dur / 60) * 60;
+    return {
+      prompt: p.ctx === 'bill' ? 'The customer sat down at the first clock and finished eating at the second clock. How long was the meal?' : 'The pot went on the stove at the first clock. The food was ready at the second clock. How long did it cook?',
+      visual: fig(start, p.ctx === 'bill' ? 'Sat down' : 'On the stove') + '<span style="font-size:44px">➜</span>' + fig(end, p.ctx === 'bill' ? 'Finished' : 'Ready'),
+      options: head ? mkOpts(fmtDur(dur), shuffle([dur + 10, dur - 10, dur + 60, dur - 60, dur + 5]).filter(v => v > 0).map(fmtDur)) : ['15 min', J[30], J[60], J[120]].map(x => ({ html: x, ok: x === J[dur] })),
+      optClass: head ? '' : 'one',
+      hint: 'Read both clocks first. Then count on from the first time to the second.',
+      explain: head ? `From ${fmtT(start)} to ${fmtT(end)}: ${dur >= 60 ? `${fmtT(start)} → ${fmtT(mid)} is ${fmtDur(mid - start)}` : ''}${dur >= 60 && dur % 60 ? ', then ' : ''}${dur % 60 ? `${fmtT(mid)} → ${fmtT(end)} is ${dur % 60} min` : ''}. That is <b>${fmtDur(dur)}</b>.`
+        : `From ${fmtT(start)} to ${fmtT(end)}, the long hand ${dur === 30 ? 'moved halfway round the clock. That is 30 minutes, or <b>half an hour</b>' : dur === 60 ? 'went all the way round once. That is 60 minutes, or <b>1 hour</b>' : 'went all the way round twice. That is <b>2 hours</b>'}.`
+    };
+  }
+};
+
+/* ---------- restaurant set-up ---------- */
+const STN = [
+  { id: 'scale', emoji: '⚖️', name: 'Scale', kinds: ['weigh'] },
+  { id: 'tank', emoji: '🥛', name: 'Tank', kinds: ['pour'] },
+  { id: 'bench', emoji: '🍜', name: 'Noodles', kinds: ['stretch'] },
+  { id: 'board', emoji: '🔪', name: 'Board', kinds: ['cut', 'top'] },
+  { id: 'oven', emoji: '⏲️', name: 'Oven', kinds: ['clockSet', 'convert', 'readClock', 'duration'] },
+  { id: 'shelf', emoji: '🗄️', name: 'Shelf', kinds: ['unit', 'order'] }
+].map((s, i) => Object.assign(s, { x: 385 + 110 * i }));
+const stnOf = k => STN.find(s => s.kinds.includes(k));
+const TABLES = [250, 520, 790].map(x => ({ x, y: 440 }));
+const SHIFT = 240;                                 // seconds the restaurant stays open
+const WAIT = { order: 40, food: 50, bill: 40 };    // seconds of patience at full speed
+const FACES = ['👧', '👦', '🧒', '👩', '👨', '👵', '👴', '🧑', '👱‍♀️', '🧔'];
+const SHIRTS = ['#3b82f6', '#e74c3c', '#2ecc71', '#9b59b6', '#ff9f1c', '#1abc9c', '#ff6fa3'];
+
+// order: asked at the table. cook: one list per cooking step, and one choice from it is picked.
+// bill: extra bill questions for that dish. A choice marked head is only used at Head Chef level.
+const DISHES = [
+  { name: 'Roti Prata', emoji: '🫓', price: 8, order: [{ k: 'ticket' }], cook: [[{ k: 'weigh', unit: 'g', what: ['flour', '🌾'] }, { k: 'pour', what: ['curry', '#e6952e'] }]] },
+  { name: 'Laksa', emoji: '🍲', price: 8, order: [{ k: 'ticket' }], cook: [[{ k: 'pour', mode: 'make', what: ['laksa gravy', '#e6952e'] }, { k: 'unit' }]] },
+  { name: 'La Mian', emoji: '🍜', price: 12, order: [{ k: 'ticket' }], cook: [[{ k: 'stretch' }], [{ k: 'clockSet' }, { k: 'convert', mode: 'toMin', head: true }]] },
+  { name: 'Pandan Cake', emoji: '🍰', price: 12, order: [{ k: 'compare' }, { k: 'name', shape: 'pie' }], cook: [[{ k: 'cut', shape: 'pie' }], [{ k: 'top', shape: 'pie' }]], bill: [{ k: 'order', type: 'frac' }, { k: 'order', type: 'frac' }] },
+  { name: 'Kueh Lapis', emoji: '🍮', price: 8, order: [{ k: 'name', shape: 'bar' }, { k: 'compare' }], cook: [[{ k: 'top', shape: 'bar' }, { k: 'cut', shape: 'bar' }]], bill: [{ k: 'order', type: 'frac' }] },
+  { name: 'Chicken Rice', emoji: '🍗', price: 12, order: [{ k: 'ticket' }], cook: [[{ k: 'weigh', unit: 'kg', what: ['rice', '🍚'] }, { k: 'order' }], [{ k: 'clockSet' }, { k: 'duration' }]] },
+  { name: 'Nasi Lemak', emoji: '🍛', price: 8, order: [{ k: 'ticket' }], cook: [[{ k: 'weigh', unit: 'g', what: ['peanuts', '🥜'] }, { k: 'order', type: 'g' }, { k: 'unit' }]] },
+  { name: 'Satay', emoji: '🍢', price: 8, order: [{ k: 'ticket' }], cook: [[{ k: 'clockSet' }, { k: 'readClock' }, { k: 'duration' }]] }
+];
+const BILL = [{ k: 'duration' }, { k: 'readClock' }, { k: 'convert', mode: 'toHM', head: true }];
+const forLevel = a => a.filter(x => !x.head || level === 'head');
+
+/* ---------- game state ---------- */
+let level = save.level, dish = null, G = null, q = null, tries = 0, answered = false, autoT = 0;
+const PRAISE = ['Yummy!', 'Well done, Chef!', 'Perfect!', 'Sedap!', 'Shiok!', 'Great cooking!'];
+const sleep = ms => new Promise(r => G.timers.push({ t: ms / 1000, r }));   // waits in game time, so it pauses with the game
+const show = (id, on) => $(id).classList.toggle('show', on);
+
+function buildStage() {
+  $('stage').innerHTML = `<div class="wall"></div><div class="counter"></div>
+    <div id="rail">ORDERS<div id="tickets"></div></div>
+    ${STN.map(s => `<button class="stn" data-s="${s.id}" style="left:${s.x - 50}px"><i>${s.emoji}</i>${s.name}</button>`).join('')}
+    <div class="door">🚪</div>
+    <div class="decor" style="left:930px;top:525px">🪴</div><div class="decor" style="left:20px;top:525px">🪴</div>
+    ${TABLES.map((t, i) => `<div class="table" style="left:${t.x - 80}px;top:${t.y - 40}px;z-index:${t.y}"><span class="food" id="food${i}"></span><em>${i + 1}</em></div>`).join('')}
+    <div id="ents"></div>`;
+  document.querySelectorAll('.stn').forEach(b => b.onclick = () => {
+    const c = G && G.custs.find(c => c.state === 'food' && !c.busy && !c.queued && stnOf(c.steps[c.step].k).id === b.dataset.s);
+    if (c) enqueue(c, 'food');
+  });
+  $('chips').innerHTML = TABLES.map(() => `<div class="chip empty"><span></span><div class="pb"><i></i></div></div>`).join('');
+}
+function fit() {
+  const r = $('room'), k = Math.min(r.clientWidth / 1000, r.clientHeight / 600);
+  const gap = r.clientHeight - 600 * k;
+  $('stage').style.transform = `translate(${(r.clientWidth - 1000 * k) / 2}px, ${gap < 200 ? 0 : gap / 2}px) scale(${k})`;
+}
+function mkEnt(cls, head, shirt, x, y, speed) {
+  const el = document.createElement('div');
+  el.className = 'ent ' + cls;
+  el.innerHTML = `<div class="hit"></div><div class="bub" hidden><span></span><div class="pb"><i></i></div></div><div class="fig"><span class="carry"></span><span class="head">${head}</span><span class="torso" style="background:${shirt}"></span></div>`;
+  $('ents').appendChild(el);
+  return { el, x, y, speed, path: [], onArrive: null, bub: el.querySelector('.bub'), want: el.querySelector('.bub span'), bar: el.querySelector('.pb i'), carryEl: el.querySelector('.carry') };
+}
+function setWant(c, icon, bar = true) { c.icon = icon; c.bub.hidden = !icon; c.want.textContent = icon; c.bar.parentNode.style.display = bar ? '' : 'none'; }
+function floatText(x, y, text) {
+  const el = document.createElement('div');
+  el.className = 'float'; el.textContent = text; el.style.left = (x - 60) + 'px'; el.style.top = y + 'px';
+  $('ents').appendChild(el); setTimeout(() => el.remove(), 1400);
+}
+const walk = (e, x, y) => new Promise(r => { e.path = [[x, y]]; e.onArrive = r; });
+
+function newGame() {
+  hush(); clearTimeout(autoT); if (q && q.cleanup) q.cleanup(); q = null;
+  buildStage(); fit();
+  const g = G = { running: true, time: SHIFT, coins: 0, served: 0, lost: 0, n: 0, custs: [], tables: [null, null, null], queue: [], deck: [], timers: [], spawnIn: 1.2, asking: false, meal: pick(['breakfast', 'lunch', 'dinner']) };
+  g.chef = mkEnt('chef', '👩‍🍳', '#fff', 600, 260, 360);
+  g.chef.idle = true;
+  ['title', 'result', 'close'].forEach(id => show(id, false));
+  sfxTap(); chefLoop(g);
+}
+
+/* ---------- customers ---------- */
+function spawn(i) {
+  const g = G, T = TABLES[i];
+  if (!g.deck.length) g.deck = shuffle(DISHES);
+  const d = g.deck.pop(), c = mkEnt('cust', pick(FACES), pick(SHIRTS), -40, 340, 170);
+  Object.assign(c, { table: i, dish: d, state: 'in', pat: 1, step: 0, stars: 0, mood: 0, turns: 0, steps: d.cook.map(a => pick(forLevel(a))) });
+  c.path = [[T.x, 340], [T.x, 412]];
+  c.onArrive = () => { c.state = 'order'; c.pat = 1; setWant(c, '✋'); };
+  c.el.onclick = () => tapCust(c);
+  g.tables[i] = c; g.custs.push(c); g.n++; sfxBell();
+}
+function leave(c, happy) {
+  const g = G;
+  c.state = 'out'; c.busy = c.queued = false;
+  g.queue = g.queue.filter(t => t.c !== c);
+  if (c.tk) { c.tk.remove(); c.tk = null; }
+  g.tables[c.table] = null; $('food' + c.table).textContent = '';
+  setWant(c, happy ? '💖' : '💢', false);
+  c.speed = happy ? 170 : 240; c.path = [[c.x, 340], [-50, 340]];
+  c.onArrive = () => { c.el.remove(); g.custs.splice(g.custs.indexOf(c), 1); };
+  if (!happy) { g.lost++; sfxBad(); floatText(c.x, c.y - 120, 'Too slow! 😠'); }
+}
+function tapCust(c) {
+  if (!G || c.busy || c.queued) return;
+  if (c.state === 'order' || c.state === 'bill' || c.state === 'food') enqueue(c, c.state);
+}
+function enqueue(c, type) { c.queued = true; G.queue.push({ c, type }); sfxTap(); }
+function addTicket(c) {
+  const b = document.createElement('button');
+  b.className = 'tk'; b.innerHTML = `<i>${c.dish.emoji}</i>Table ${c.table + 1}<div class="pb"><i></i></div>`;
+  b.onclick = () => tapCust(c);
+  $('tickets').appendChild(b); c.tk = b; c.tkBar = b.querySelector('.pb i');
+}
+function pay(c) {
+  const g = G, total = c.dish.price + c.stars + Math.round(6 * c.mood / c.turns);
+  g.coins += total; g.served++;
+  floatText(c.x, c.y - 120, `+${total} 🪙`); sfxCoin();
+  $('hCoinPill').classList.remove('pop'); void $('hCoinPill').offsetWidth; $('hCoinPill').classList.add('pop');
+  leave(c, true);
+}
+
+/* ---------- the chef works through the taps one at a time ---------- */
+async function chefLoop(g) {
+  const ch = g.chef, live = () => G === g && g.running;
+  while (live()) {
+    const t = g.queue.shift();
+    if (!t) { if (!ch.idle) { ch.idle = true; ch.path = [[600, 260]]; } await sleep(100); continue; }
+    const c = t.c, T = TABLES[c.table];
+    if (c.state !== t.type) { c.queued = false; continue; }
+    ch.idle = false; c.busy = true; c.mood += c.pat; c.turns++;
+    if (t.type === 'food') {
+      while (c.step < c.steps.length) {
+        const st = c.steps[c.step], s = stnOf(st.k), el = document.querySelector(`.stn[data-s="${s.id}"]`);
+        await walk(ch, s.x, 215); if (!live()) return;
+        c.stars += await ask(st, c, 'cook'); if (!live()) return;
+        c.step++;
+        el.classList.add('work'); ch.el.classList.add('work'); sfxSizzle();
+        await sleep(1100); if (!live()) return;
+        el.classList.remove('work'); ch.el.classList.remove('work');
+      }
+      ch.carryEl.textContent = c.dish.emoji;
+      await walk(ch, T.x + 105, T.y + 30); if (!live()) return;
+      ch.carryEl.textContent = ''; $('food' + c.table).textContent = c.dish.emoji;
+      if (c.tk) { c.tk.remove(); c.tk = null; }
+      c.state = 'eat'; c.eat = 6; setWant(c, '😋', false); sfxGood();
+    } else {
+      await walk(ch, T.x + 105, T.y + 30); if (!live()) return;
+      c.stars += await ask(pick(t.type === 'order' ? c.dish.order : forLevel(BILL.concat(c.dish.bill || []))), c, t.type); if (!live()) return;
+      if (t.type === 'order') { c.state = 'food'; c.pat = 1; setWant(c, c.dish.emoji); addTicket(c); }
+      else pay(c);
+    }
+    c.busy = c.queued = false;
+  }
+}
+
+/* ---------- animation loop ---------- */
+function moveEnt(e, dt) {
+  if (e.path.length) {
+    const [tx, ty] = e.path[0], dx = tx - e.x, dy = ty - e.y, d = Math.hypot(dx, dy), k = e.speed * dt;
+    if (d <= k) { e.x = tx; e.y = ty; e.path.shift(); if (!e.path.length && e.onArrive) { const f = e.onArrive; e.onArrive = null; f(); } }
+    else { e.x += dx / d * k; e.y += dy / d * k; }
+  }
+  e.el.style.transform = `translate(${e.x.toFixed(1)}px, ${e.y.toFixed(1)}px)`;
+  e.el.style.zIndex = Math.round(e.y);
+  e.el.classList.toggle('walk', e.path.length > 0);
+}
+const barCol = p => p > .5 ? '#2ecc71' : p > .25 ? '#ff9f1c' : '#e74c3c';
+function step(dt) {
+  const g = G;
+  if (!g || !g.running) return;
+  const slow = g.asking ? 1 / 3 : 1;      // customers are more patient while a question is open
+  g.time = Math.max(0, g.time - dt);
+  g.timers = g.timers.filter(w => (w.t -= dt) > 0 || w.r());
+  g.spawnIn -= dt;
+  if (g.spawnIn <= 0 && g.time > 15) {
+    const free = g.tables.indexOf(null);
+    if (free < 0) g.spawnIn = 2;
+    else { spawn(free); g.spawnIn = g.n === 1 ? 14 : 24 - 10 * (1 - g.time / SHIFT) + rnd(-3, 3); }
+  }
+  moveEnt(g.chef, dt);
+  for (const c of g.custs.slice()) {
+    moveEnt(c, dt);
+    if (WAIT[c.state] && !c.busy) {
+      const before = c.pat;
+      c.pat -= dt * slow / (WAIT[c.state] + (c.state === 'food' ? 22 * (c.steps.length - 1) : 0));
+      if (before > .25 && c.pat <= .25) sfxWarn();
+      if (c.pat <= 0) { leave(c, false); continue; }
+    }
+    if (c.state === 'eat') {
+      c.eat -= dt; $('food' + c.table).style.transform = `scale(${.45 + .55 * Math.max(0, c.eat) / 6})`;
+      if (c.eat <= 0) { c.state = 'bill'; c.pat = 1; setWant(c, '💵'); $('food' + c.table).textContent = '🍽️'; $('food' + c.table).style.transform = ''; sfxBell(); }
+    }
+    const waiting = !!WAIT[c.state];
+    c.bar.style.width = c.pat * 100 + '%'; c.bar.style.background = barCol(c.pat);
+    c.el.classList.toggle('q', waiting && !!(c.queued || c.busy));
+    c.el.classList.toggle('hurry', waiting && !c.busy && c.pat <= .25);
+    c.el.classList.toggle('eat', c.state === 'eat');
+    if (c.tk) { c.tkBar.style.width = c.pat * 100 + '%'; c.tkBar.style.background = barCol(c.pat); c.tk.classList.toggle('q', !!(c.queued || c.busy)); }
+  }
+  STN.forEach(s => document.querySelector(`.stn[data-s="${s.id}"]`).classList.toggle('glow', g.custs.some(c => c.state === 'food' && !c.busy && !c.queued && stnOf(c.steps[c.step].k) === s)));
+  // top bar
+  const sec = Math.ceil(g.time);
+  $('hTime').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  $('hBar').style.width = g.time / SHIFT * 100 + '%';
+  $('hCoins').textContent = g.coins; $('hServed').textContent = g.served; $('hLost').textContent = g.lost;
+  [...$('chips').children].forEach((chip, i) => {
+    const c = g.tables[i], on = !!c && c.state !== 'in', waits = on && !!WAIT[c.state];
+    chip.classList.toggle('empty', !on);
+    chip.classList.toggle('hurry', waits && !c.busy && c.pat <= .25);
+    chip.firstChild.textContent = `${i + 1} ${on ? c.icon : ''}`;
+    chip.querySelector('i').style.width = (waits ? c.pat * 100 : on ? 100 : 0) + '%';
+    chip.querySelector('i').style.background = barCol(waits ? c.pat : 1);
+  });
+  const need = s => g.custs.some(c => c.state === s && !c.queued && !c.busy);
+  const hint = need('order') ? 'A customer wants to order. Tap the customer with ✋.' : need('food') ? 'An order is waiting. Tap the order ticket to cook it.' : need('bill') ? 'A customer wants the bill. Tap the customer with 💵.' : g.time === 0 && g.custs.length ? 'Closing time! Serve the last customers.' : '';
+  if (hint !== g.hint) { g.hint = hint; if (hint) $('hintText').textContent = hint; $('hint').classList.toggle('off', !hint); }
+  if (g.time === 0 && !g.custs.length && g.chef.idle && !g.asking) finish();
+}
+let lastT = performance.now();
+function tick() {
+  const now = performance.now(), dt = Math.min(.1, (now - lastT) / 1000);
+  lastT = now;
+  if (!document.hidden) step(dt);
+}
+(function frame() { tick(); requestAnimationFrame(frame); })();
+setInterval(() => { if (performance.now() - lastT > 90) tick(); }, 50);   // keeps the game moving if the browser holds back animation frames
+window.addEventListener('resize', fit);
+
+/* ---------- maths question pop-up ---------- */
+function ask(st, c, ctx) {
+  return new Promise(res => {
+    dish = c.dish; G.asking = true;
+    q = KINDS[st.k](Object.assign({ ctx }, st)); q.res = res; tries = 0; answered = false;
+    const s = stnOf(st.k);
+    $('cuStation').textContent = ctx === 'order' ? '🧾 Taking the order' : ctx === 'bill' ? '💵 The bill' : `${s.emoji} ${s.name}`;
+    $('cuStep').textContent = `${c.dish.emoji} ${c.dish.name} · Table ${c.table + 1}`;
+    $('cuPrompt').innerHTML = html(q.prompt);
+    const work = $('work'); work.className = ''; work.innerHTML = '';
+    $('fb').className = ''; $('fb').innerHTML = '';
+    $('nextBtn').style.display = 'none';
+    $('doneBtn').style.display = q.options ? 'none' : '';
+    if (q.options) {
+      work.innerHTML = (q.visual ? `<div class="visual">${q.visual}</div>` : '') + `<div class="opts ${q.optClass || ''}">${q.options.map((o, i) => `<button class="ans" data-i="${i}">${o.html}</button>`).join('')}</div>`;
+      if (q.after) q.after(work);
+      work.querySelectorAll('.opts .ans').forEach(b => b.onclick = () => {
+        if (answered) return;
+        const ok = q.options[+b.dataset.i].ok;
+        b.classList.add(ok ? 'right' : 'wrong'); if (!ok) b.disabled = true;
+        answer(ok, q.hint);
+      });
+      q.reveal = () => work.querySelectorAll('.opts .ans').forEach(b => { if (q.options[+b.dataset.i].ok) b.classList.add('right'); });
+    } else q.mount(work);
+    show('close', true);
+    $('close').scrollTop = 0;
+    speak(say(q.prompt));
+  });
+}
+function answer(ok, hint) {
+  if (answered) return;
+  if (ok) { sfxGood(); return finishStep(Math.max(1, 3 - tries), pick(PRAISE)); }
+  tries++; sfxBad();
+  if (tries >= (q.maxTries || 2)) { q.reveal(); return finishStep(1, 'Let Chef show you.'); }
+  $('fb').className = 'bad'; $('fb').innerHTML = html(hint || 'Not quite. Try again!');
+  $('work').classList.remove('shake'); void $('work').offsetWidth; $('work').classList.add('shake');
+}
+function finishStep(stars, lead) {
+  answered = true; q.stars = stars;
+  $('fb').className = stars > 1 ? 'good' : 'info';
+  $('fb').innerHTML = `<b>${lead} ${'⭐'.repeat(stars)}</b><br>${html(q.explain)}`;
+  $('work').classList.add('locked');
+  $('doneBtn').style.display = 'none';
+  // A right answer closes by itself so the kitchen keeps moving. After a miss, Chef waits for OK.
+  if (stars > 1) autoT = setTimeout(closeAsk, 1500); else $('nextBtn').style.display = '';
+}
+function closeAsk() {
+  clearTimeout(autoT);
+  if (!q || !answered) return;
+  hush(); if (q.cleanup) q.cleanup();
+  show('close', false);
+  const res = q.res, stars = q.stars; q = null;
+  if (G) G.asking = false;
+  res(stars);
+}
+
+/* ---------- menu and results ---------- */
+function renderMenu() {
+  document.querySelectorAll('#levels .opt').forEach(b => b.classList.toggle('sel', b.dataset.lv === level));
+  const best = save.best[level];
+  $('best').textContent = best ? `Best shift: 🪙 ${best}` : '';
+}
+function goMenu() {
+  hush(); clearTimeout(autoT); if (q && q.cleanup) q.cleanup(); q = null; G = null;
+  ['close', 'result'].forEach(id => show(id, false)); show('title', true); renderMenu();
+}
+function finish() {
+  const g = G; g.running = false;
+  const stars = g.lost === 0 && g.served >= 6 ? 3 : g.served >= 4 && g.lost <= 2 ? 2 : 1;
+  const record = g.coins > (save.best[level] || 0);
+  if (record) { save.best[level] = g.coins; persist(); }
+  $('medal').textContent = ['🥉', '🥈', '🥇'][stars - 1];
+  $('rTitle').textContent = 'Closing time!';
+  $('rStats').innerHTML = `🪙 ${g.coins} coins${record ? ' · New best!' : ''}<br>😊 ${g.served} happy customer${g.served === 1 ? '' : 's'}<br>😠 ${g.lost} walked out`;
+  show('result', true); sfxServe();
+}
+
+$('doneBtn').onclick = () => { if (answered) return; const r = q.check(); if (r.ok === null) { $('fb').className = 'info'; $('fb').innerHTML = r.hint; return; } answer(r.ok, r.hint); };
+$('nextBtn').onclick = closeAsk;
+$('sayBtn').onclick = () => { const was = save.muted; save.muted = false; speak(say(q.prompt)); save.muted = was; };
+$('menuBtn').onclick = goMenu;
+$('rMenuBtn').onclick = goMenu;
+$('againBtn').onclick = newGame;
+$('startBtn').onclick = newGame;
+const renderMute = () => $('muteBtn').textContent = save.muted ? '🔇' : '🔊';
+$('muteBtn').onclick = () => { save.muted = !save.muted; if (save.muted) hush(); persist(); renderMute(); };
+document.querySelectorAll('#levels .opt').forEach(b => b.onclick = () => { level = save.level = b.dataset.lv; persist(); sfxTap(); renderMenu(); });
+$('ver').textContent = APP_VERSION;
+buildStage(); fit(); renderMute(); renderMenu();
+
+// For testing from the browser console.
+window.chefDebug = { KINDS, DISHES, step, game: () => G, setLevel: lv => level = lv, reset() { try { localStorage.removeItem(SAVE_KEY); } catch (e) {} } };
+</script>
+</body>
+</html>
