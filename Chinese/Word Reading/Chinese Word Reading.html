@@ -294,6 +294,7 @@
     <div class="panel">
       <h2>Tools</h2>
       <div class="row" style="margin-top:16px">
+        <button class="grey" id="soundTestBtn">Test sound</button>
         <button class="grey" id="micTestBtn">Test microphone</button>
         <button class="grey" id="resetBtn">Reset progress</button>
       </div>
@@ -702,9 +703,20 @@ function isMatch(target, alts){
 
 /* ---------- speech: recognition ---------- */
 let rec = null, recToken = 0, micBlocked = false, onHeard = null;
+// Resolves once the microphone has really switched off. On iPad, speech played while the
+// mic is still shutting down comes out silent, so anything spoken waits for this first.
+let micReleased = Promise.resolve();
 function stopListen(){
   recToken++;
-  if(rec){ try{ rec.onend = rec.onresult = rec.onerror = null; rec.abort(); }catch(e){} rec = null; }
+  if(rec){
+    const r = rec; rec = null;
+    micReleased = new Promise(res=>{
+      r.onresult = r.onerror = null;
+      r.onend = ()=> setTimeout(res, 200);
+      try{ r.abort(); }catch(e){ res(); }
+      setTimeout(res, 1000);
+    });
+  }
   $('micBtn').classList.remove('live');
 }
 function listen(){
@@ -756,7 +768,8 @@ function makeUtterance(text){
 // Speak one or more phrases back to back, then call cb once.
 // All phrases are queued in one go: chaining a second speak() from the first one's
 // "end" event gets dropped by some browsers (notably iPad Safari and Chrome).
-function speak(texts, cb){
+function speakAfterMic(texts, cb){ micReleased.then(()=> speak(texts, cb)); }
+function speak(texts, cb, maxMs){
   let done = false; const fin = ()=>{ if(!done){ done = true; cb && cb(); } };
   if(!window.speechSynthesis){ fin(); return; }
   if(!Array.isArray(texts)) texts = [texts];
@@ -768,13 +781,8 @@ function speak(texts, cb){
     last.onend = fin; last.onerror = fin;
     liveUtterances.forEach(u => speechSynthesis.speak(u));
     speechSynthesis.resume();
-    setTimeout(fin, 3000 + 2500*texts.length);
+    setTimeout(fin, maxMs || 3000 + 2500*texts.length);
   }catch(e){ fin(); }
-}
-// iPad only lets a page talk after speech has been started from a tap.
-function unlockSpeech(){
-  if(!window.speechSynthesis) return;
-  try{ const u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'zh-CN'; speechSynthesis.speak(u); }catch(e){}
 }
 
 /* ---------- session ---------- */
@@ -807,9 +815,15 @@ $('startBtn').onclick = ()=>{
   if(!q.length) return;
   sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
   micBlocked = false;
-  unlockSpeech();
   show('session');
-  nextWord();
+  // iPad only lets a page talk after speech has been started from a tap, so say "开始" on this tap,
+  // and only switch the microphone on once it has finished
+  const s0 = sess;
+  $('progChip').textContent = '1 / ' + q.length;
+  $('wordEl').textContent = ''; $('pinyinEl').textContent = ''; $('meaningEl').textContent = '';
+  $('promptEl').textContent = 'Ready… 开始！'; $('heardEl').textContent = '';
+  $('timerNum').textContent = ''; setStage('');
+  speak('开始', ()=>{ if(sess === s0 && !s0.phase) nextWord(); }, 2500);
 };
 
 function setStage(cls){ const s=$('stage'); s.classList.remove('good','bad'); if(cls) s.classList.add(cls); }
@@ -879,7 +893,7 @@ function readCorrect(){
   setStage('good'); $('promptEl').textContent = '✅ Correct! 对了！';
   $('pinyinEl').textContent = sess.cur.p || '';
   const s = sess, i = sess.i, shown = Date.now();
-  speak('对了', ()=>{
+  speakAfterMic('对了', ()=>{
     // move on once "对了" has been said (and the tick has been visible for a moment)
     setTimeout(()=>{ if(sess===s && s.phase==='feedback' && s.i===i){ s.i++; nextWord(); } }, Math.max(0, 600-(Date.now()-shown)));
   });
@@ -893,7 +907,7 @@ function readWrong(){
   setStage('bad');
   $('pinyinEl').textContent = o.p || toPinyinTone(o.w);
   $('meaningEl').textContent = o.m || '';
-  $('promptEl').textContent = '❌ 错！Listen… 听一听';
+  $('promptEl').textContent = '❌ 错了！Listen… 听一听';
   $('timerFill').style.strokeDashoffset = 100; $('timerNum').textContent = '';
   $('okBtn').classList.add('hidden'); $('noBtn').classList.add('hidden'); $('nextBtn').classList.remove('hidden');
   const tok = ++sess.token;
@@ -906,8 +920,8 @@ function readWrong(){
     setTimeout(()=>{ if(sess && tok===sess.token) listen(); }, 300);
     startTimer(()=> repeatDone(false));
   };
-  // say "错", then straight away the correct reading (short pause lets the mic switch off first)
-  setTimeout(()=>{ if(sess && tok===sess.token) speak(['错', o.w], afterWord); }, 250);
+  // say "错了", then straight away the correct reading (once the mic has switched off)
+  micReleased.then(()=>{ if(sess && tok===sess.token) speak(['错了', o.w], afterWord); });
 }
 
 function toPinyinTone(s){
@@ -964,6 +978,17 @@ function summary(){
   sess = null;
 }
 $('homeBtn').onclick = renderHome;
+
+/* ---------- sound test ---------- */
+$('soundTestBtn').onclick = ()=>{
+  const m = $('micMsg'); m.className = 'msg';
+  if(!window.speechSynthesis){ m.classList.add('err'); m.textContent = 'This browser cannot speak.'; return; }
+  loadVoices();
+  const zh = voices.filter(v => /^zh/i.test(v.lang)).length;
+  m.textContent = '🔊 You should hear "对了" then "错了". Chinese voices on this device: ' + zh + '.'
+    + (zh ? ' If it is silent, turn the volume up and switch off Silent Mode.' : ' No Chinese voice found – add one in Settings → Accessibility → Spoken Content → Voices.');
+  speak(['对了', '错了']);
+};
 
 /* ---------- microphone test ---------- */
 $('micTestBtn').onclick = ()=>{
