@@ -152,7 +152,7 @@
 <script>
 (() => {
 'use strict';
-const APP_VERSION = 'v1.1';
+const APP_VERSION = 'v1.2';
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -452,7 +452,7 @@ const HEROES = [
   { name: 'Leaf',  helmet: '#2ecc71', suit: '#8e44ad', need: 15 },
   { name: 'Goldie', helmet: '#f1c40f', suit: '#c0392b', need: 30 }
 ];
-const POWERS = { speed: ['👟', 'Speed boots', 25000], bomb2: ['💣', 'Two bombs', 25000], shield: ['🛡️', 'Shield', 40000] };
+const POWERS = { speed: ['👟', 'Speed boots', 25000], bomb2: ['💣', 'Three bombs', 25000], shield: ['🛡️', 'Shield', 40000] };
 
 // ---------- game state ----------
 const COLS = 13, ROWS = 11, TS = 32;
@@ -722,7 +722,7 @@ function stageClear() {
 
 // ---------- bombs ----------
 function placeBomb() {
-  if (mode !== 'play' || bombs.length >= (power && power.type === 'bomb2' ? 2 : 1)) return;
+  if (mode !== 'play' || bombs.length >= (power && power.type === 'bomb2' ? 3 : 2)) return;     // two bombs at a time, three with the power-up
   const [x, y] = playerCell();
   if (bombAt(x, y)) return;
   bombs.push({ x, y, fuse: FUSE_MS });
