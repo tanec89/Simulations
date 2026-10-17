@@ -152,7 +152,7 @@
 <script>
 (() => {
 'use strict';
-const APP_VERSION = 'v1.2';
+const APP_VERSION = 'v1.3';
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
@@ -438,13 +438,13 @@ const allSkills = () => [0, 1, 2, 3].flatMap(stageSkills);
 const ROSTER = {
   easy: [['blob', 'blob'], ['blob', 'bat'], ['blob', 'bat'], ['blob', 'bat', 'bat'], ['blob']],
   mid:  [['blob', 'blob', 'blob'], ['blob', 'blob', 'bat'], ['blob', 'bat', 'bat'], ['blob', 'bat', 'chaser'], ['bat', 'chaser']],
-  hard: [['blob', 'blob', 'bat', 'bat'], ['blob', 'bat', 'bat', 'ghost'], ['bat', 'bat', 'chaser', 'ghost'], ['bat', 'chaser', 'chaser', 'ghost'], ['bat', 'chaser', 'ghost']]
+  hard: [['blob', 'blob', 'bat', 'bat'], ['blob', 'bat', 'bat'], ['bat', 'bat', 'chaser'], ['bat', 'chaser', 'chaser'], ['bat', 'chaser']]
 };
 // milliseconds a monster takes to cross one square (the bomber takes 190)
 const SPEED = {
-  easy: { blob: 640, bat: 480, chaser: 520, ghost: 680, num: 720, boss: 720 },
-  mid:  { blob: 530, bat: 400, chaser: 440, ghost: 600, num: 620, boss: 620 },
-  hard: { blob: 440, bat: 330, chaser: 360, ghost: 520, num: 520, boss: 520 }
+  easy: { blob: 900, bat: 670, chaser: 730, num: 1000, boss: 1000 },
+  mid:  { blob: 740, bat: 560, chaser: 620, num: 870, boss: 870 },
+  hard: { blob: 620, bat: 460, chaser: 500, num: 730, boss: 730 }
 };
 const HEROES = [
   { name: 'Sunny', helmet: '#ff9f1c', suit: '#3b82f6', need: 0 },
@@ -572,14 +572,14 @@ function monWalk(m, x, y) {
   const t = grid[y][x];
   // number monsters never share a square, so one can never hide behind another
   if (m.type === 'num' && monsters.some(o => o !== m && o.type === 'num' && ((o.x === x && o.y === y) || (o.nx === x && o.ny === y)))) return false;
-  return t !== WALL && t !== CRATE && (t !== BRICK || m.type === 'ghost') && !bombAt(x, y);
+  return t !== WALL && t !== CRATE && t !== BRICK && !bombAt(x, y);
 }
 function monChoose(m) {
   const open = DIRKEYS.filter(d => monWalk(m, m.x + DIRS[d][0], m.y + DIRS[d][1]));
   if (!open.length) return null;
   const ahead = open.filter(d => d !== OPP[m.dir]), pool = ahead.length ? ahead : open;
   const me = playerCell(), gap = d => Math.abs(m.x + DIRS[d][0] - me[0]) + Math.abs(m.y + DIRS[d][1] - me[1]);
-  const hunts = m.type === 'chaser' || m.type === 'boss' ? !far([m.x, m.y], me, 7) && Math.random() < .8 : m.type === 'ghost' && Math.random() < .5;
+  const hunts = (m.type === 'chaser' || m.type === 'boss') && !far([m.x, m.y], me, 7) && Math.random() < .8;
   if (hunts) return pool.reduce((a, b) => gap(b) < gap(a) ? b : a);
   if (m.type === 'bat' && pool.includes(m.dir)) return m.dir;        // bats fly straight until something is in the way
   return pick(pool);
@@ -914,7 +914,7 @@ function drawMonster(m, time) {
   const still = freeze > 0 || m.stun > 0, wob = still ? 0 : Math.sin(time / 150 + m.seed);
   ctx.save();
   if (m.spawn > 0) ctx.globalAlpha = Math.max(.15, 1 - m.spawn / 900);
-  if (m.type !== 'bat' && m.type !== 'ghost') oval(cx, cy + 12, 10, 3, 'rgba(0,0,0,.22)');
+  if (m.type !== 'bat') oval(cx, cy + 12, 10, 3, 'rgba(0,0,0,.22)');
   if (m.type === 'blob') {
     oval(cx, cy + 1 - wob, 11 + wob, 10 - wob, '#5b2c83'); oval(cx, cy - wob, 9.5 + wob, 8.5 - wob, '#9b59b6');
     eyes(cx, cy - 2 - wob, m.dir);
@@ -929,12 +929,6 @@ function drawMonster(m, time) {
     disc(cx, cy + wob * .5, 11, '#7b241c'); disc(cx, cy - 1 + wob * .5, 9.5, '#e74c3c');
     eyes(cx, cy - 1, m.dir, 4, true);
     ctx.fillStyle = '#fff'; ctx.fillRect(cx - 4, cy + 5, 3, 3); ctx.fillRect(cx + 1, cy + 5, 3, 3);
-  } else if (m.type === 'ghost') {
-    ctx.globalAlpha *= .8;
-    ctx.fillStyle = '#f4f6fb'; ctx.beginPath(); ctx.arc(cx, cy - 2 + wob, 10, Math.PI, 0); ctx.lineTo(cx + 10, cy + 10 + wob);
-    for (let i = 0; i < 4; i++) { ctx.lineTo(cx + 7.5 - i * 5, cy + (i % 2 ? 10 : 6) + wob); }
-    ctx.lineTo(cx - 10, cy + 10 + wob); ctx.fill();
-    disc(cx - 4, cy - 2 + wob, 2.2, '#1b2a41'); disc(cx + 4, cy - 2 + wob, 2.2, '#1b2a41');
   } else if (m.type === 'num') {
     ctx.fillStyle = '#0b5345'; ctx.fillRect(cx - 6, cy - 15, 2, 5); ctx.fillRect(cx + 4, cy - 15, 2, 5);
     disc(cx - 5, cy - 15 + wob, 3, '#fff'); disc(cx + 5, cy - 15 - wob, 3, '#fff'); disc(cx - 5, cy - 15 + wob, 1.4, '#1b2a41'); disc(cx + 5, cy - 15 - wob, 1.4, '#1b2a41');
