@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2 Dig Deep</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --ink: #1b2a41; --gold: #ffc93c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: radial-gradient(circle at 50% 30%, #3a2414, #140a04); font-family: 'Nunito', system-ui, sans-serif; color: #fff; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #stage { position: relative; width: 820px; height: 684px; padding: 12px; display: flex; gap: 16px; transform-origin: center center; flex: none; }
+  #well { position: relative; width: 540px; height: 660px; border-radius: 14px; overflow: hidden; box-shadow: 0 0 0 4px #6b4426, 0 14px 34px rgba(0,0,0,.7); background: #2a1a0e; }
+  canvas { display: block; }
+
+  /* ---------- side panel ---------- */
+  #hud { width: 240px; height: 660px; display: flex; flex-direction: column; gap: 10px; }
+  .hbox { background: linear-gradient(180deg, #3d2615, #27170b); border: 3px solid #6b4426; border-radius: 14px; padding: 8px 12px; }
+  .hlabel { font: 800 13px 'Baloo 2', sans-serif; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; }
+  .hval { font: 800 34px/1.05 'Baloo 2', sans-serif; }
+  .hval small { font-size: 18px; opacity: .8; }
+  #hTopic { font: 800 21px/1.15 'Baloo 2', sans-serif; }
+  #hLayer { font: 700 13px/1.3 'Nunito', sans-serif; color: #f3dcc4; margin-top: 2px; }
+  .airbar { height: 24px; background: #120904; border-radius: 12px; overflow: hidden; border: 2px solid #000; margin-top: 4px; }
+  .airfill { height: 100%; width: 100%; background: linear-gradient(90deg, #22c7ff, #8cf3ff); transition: width .15s; }
+  .low .airfill { background: linear-gradient(90deg, #ff3b3b, #ff9a9a); animation: blink .5s infinite; }
+  .row2 { display: flex; gap: 10px; }
+  .row2 .hbox { flex: 1; }
+  .keys { font: 700 12.5px/1.45 'Nunito', sans-serif; color: #f3dcc4; }
+  .keys b { display: inline-block; min-width: 22px; text-align: center; background: #f3dcc4; color: #3d2615; border-radius: 5px; padding: 0 4px; margin-right: 3px; font-weight: 800; }
+  #hud .grow { flex: 1; }
+  a.menu { color: #f3dcc4; font-weight: 700; font-size: 14px; text-decoration: none; }
+  a.menu:hover { text-decoration: underline; }
+  .hbtn { font: 800 15px 'Baloo 2', sans-serif; background: #6b4426; color: #fff; border: 0; border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+
+  /* ---------- banners on the well ---------- */
+  #banner { position: absolute; left: 0; right: 0; top: 62%; text-align: center; pointer-events: none; opacity: 0; transition: opacity .3s; }
+  #banner.show { opacity: 1; }
+  #banner .b1 { display: inline-block; background: rgba(27,42,65,.92); border: 4px solid var(--gold); border-radius: 18px; padding: 10px 26px; }
+  #banner .bt { font: 800 16px 'Baloo 2', sans-serif; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+  #banner .bm { font: 800 32px/1.1 'Baloo 2', sans-serif; }
+  #banner .bs { font: 700 15px 'Nunito', sans-serif; color: #dfe8f5; }
+
+  /* ---------- question panel ---------- */
+  #qwrap { position: absolute; inset: 0; display: none; background: linear-gradient(180deg, rgba(10,5,2,0) 0, rgba(10,5,2,0) 150px, rgba(10,5,2,.5) 230px); }
+  #qwrap.show { display: block; }
+  .qpanel { position: absolute; left: 14px; right: 14px; bottom: 14px; background: #fffaf0; color: var(--ink); border-radius: 18px; border: 4px solid var(--ink); padding: 12px 14px 14px; box-shadow: 0 10px 0 rgba(0,0,0,.35); animation: qin .25s ease-out; }
+  @keyframes qin { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .qhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .qwarn { font: 800 17px 'Baloo 2', sans-serif; color: #c0392b; white-space: nowrap; }
+  .qtopic { font: 800 13px 'Nunito', sans-serif; background: var(--ink); color: var(--gold); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  .qprompt { font: 800 34px/1.15 'Baloo 2', sans-serif; text-align: center; margin: 8px 0 10px; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .qprompt .sub { font: 700 18px/1.35 'Nunito', sans-serif; }
+  .qprompt .clocks { display: flex; gap: 26px; }
+  .qprompt .clocks > div { display: flex; flex-direction: column; align-items: center; font: 800 18px 'Baloo 2', sans-serif; }
+  .qchoices { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .ch { font: 800 25px/1.1 'Baloo 2', sans-serif; background: #fff; color: var(--ink); border: 3px solid var(--ink); border-radius: 14px; padding: 6px 4px 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 4px 0 var(--ink); min-height: 82px; justify-content: flex-start; }
+  .ch:hover { background: #fff3cf; }
+  .ch .key { font: 800 17px 'Baloo 2', sans-serif; background: var(--ink); color: var(--gold); border-radius: 8px; padding: 0 12px; }
+  .ch .txt.long { font-size: 18px; }
+  .ch.good { background: #2ecc71; color: #fff; }
+  .ch.bad { background: #ff6b6b; color: #fff; animation: shake .3s; }
+  .ch.faded { opacity: .22; pointer-events: none; }
+  .qfoot { min-height: 22px; margin-top: 8px; font: 700 15px/1.35 'Nunito', sans-serif; text-align: center; }
+  .qfoot.tip { background: #fff0c2; border-radius: 10px; padding: 6px 10px; }
+  .qtimer { height: 8px; border-radius: 4px; background: #e3d7c3; margin-top: 8px; overflow: hidden; display: none; }
+  .qtimer > div { height: 100%; background: #e67e22; width: 100%; }
+
+  /* money pieces (same look as P2 Money) */
+  .pieces { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; max-width: 470px; }
+  .mny { font: 800 18px 'Baloo 2', sans-serif; color: #fff; display: inline-flex; align-items: center; justify-content: center; text-shadow: 0 1px 2px rgba(0,0,0,.5); flex: none; }
+  .mny.note { width: 92px; height: 46px; border-radius: 5px; border: 3px solid rgba(255,255,255,.75); outline: 2px solid var(--ink); font-size: 22px; }
+  .mny.v1000 { background: linear-gradient(135deg, #c0392b, #ef7d72 50%, #c0392b); }
+  .mny.v500 { background: linear-gradient(135deg, #2e8b57, #72cf9a 50%, #2e8b57); }
+  .mny.v200 { background: linear-gradient(135deg, #7d3c98, #c39bd3 50%, #7d3c98); }
+  .mny.coin { border-radius: 50%; outline: 2px solid var(--ink); }
+  .mny.v100 { width: 48px; height: 48px; background: radial-gradient(circle, #cfd4da 0 52%, #d4a017 54% 100%); color: var(--ink); text-shadow: none; }
+  .mny.v50 { width: 44px; height: 44px; background: radial-gradient(circle at 35% 30%, #f6d365, #c8930f); }
+  .mny.v20 { width: 39px; height: 39px; background: radial-gradient(circle at 35% 30%, #eef1f4, #8e98a3); color: var(--ink); text-shadow: none; font-size: 16px; }
+  .mny.v10 { width: 34px; height: 34px; background: radial-gradient(circle at 35% 30%, #eef1f4, #8e98a3); color: var(--ink); text-shadow: none; font-size: 14px; }
+  .mny.v5 { width: 30px; height: 30px; background: radial-gradient(circle at 35% 30%, #f6e3a1, #b8901c); color: var(--ink); text-shadow: none; font-size: 13px; }
+
+  /* ---------- full screens (menu / pause / end) ---------- */
+  .screen { position: absolute; inset: 0; display: none; border-radius: 16px; background: linear-gradient(180deg, #4a2c18, #22130a); padding: 22px 26px; color: #fff; z-index: 5; }
+  .screen.show { display: block; }
+  .screen h1 { font: 800 46px/1 'Baloo 2', sans-serif; margin: 0; color: var(--gold); text-shadow: 0 3px 0 #000; }
+  .screen h2 { font: 800 20px 'Baloo 2', sans-serif; margin: 0 0 6px; color: var(--gold); }
+  .mcols { display: flex; gap: 22px; margin-top: 12px; }
+  .mcol { flex: 1; }
+  .how { font: 700 14.5px/1.5 'Nunito', sans-serif; background: rgba(0,0,0,.25); border-radius: 14px; padding: 10px 14px; margin: 0; list-style: none; }
+  .how li { margin: 3px 0; }
+  .how b.k { display: inline-block; min-width: 24px; text-align: center; background: #f3dcc4; color: #3d2615; border-radius: 5px; padding: 0 5px; }
+  .opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: rgba(255,255,255,.08); border: 3px solid transparent; color: #fff; border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; cursor: pointer; font-family: 'Nunito', sans-serif; }
+  .opt:hover { background: rgba(255,255,255,.15); }
+  .opt.sel { border-color: var(--gold); background: rgba(255,201,60,.18); }
+  .opt .ic { font-size: 30px; }
+  .opt .t { font: 800 19px/1.1 'Baloo 2', sans-serif; }
+  .opt .d { font: 600 12.5px/1.35 'Nunito', sans-serif; color: #f3dcc4; }
+  .speeds { display: flex; gap: 8px; }
+  .speeds .opt { justify-content: center; text-align: center; flex-direction: column; gap: 0; padding: 6px; }
+  .big { font: 800 26px 'Baloo 2', sans-serif; background: var(--gold); color: var(--ink); border: 0; border-radius: 16px; padding: 8px 28px; cursor: pointer; box-shadow: 0 5px 0 #a8791a; }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #a8791a; }
+  .big.alt { background: #f3dcc4; box-shadow: 0 5px 0 #8a6a4c; }
+  .tagline { font: 700 16px 'Nunito', sans-serif; color: #f3dcc4; margin: 4px 0 0; }
+  #moleArt { display: block; margin: 4px auto 0; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+  .stat { background: rgba(0,0,0,.28); border-radius: 14px; padding: 8px; text-align: center; }
+  .stat .v { font: 800 32px/1 'Baloo 2', sans-serif; color: var(--gold); }
+  .stat .l { font: 700 13px 'Nunito', sans-serif; color: #f3dcc4; }
+  .recap { background: rgba(0,0,0,.25); border-radius: 14px; padding: 10px 14px; font: 600 14.5px/1.45 'Nunito', sans-serif; max-height: 300px; overflow: auto; }
+  .recap ul { margin: 4px 0 8px; padding-left: 20px; }
+  .recap .ok { color: #8ff0c2; }
+  .center { text-align: center; }
+
+  @keyframes blink { 50% { opacity: .35; } }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="stage">
+    <div id="well">
+      <canvas id="cv" width="540" height="660"></canvas>
+      <div id="banner"><div class="b1"><div class="bt" id="bT"></div><div class="bm" id="bM"></div><div class="bs" id="bS"></div></div></div>
+      <div id="qwrap">
+        <div class="qpanel">
+          <div class="qhead"><span class="qwarn">⚠️ Rock falling! Answer to smash it</span><span class="qtopic" id="qTopic"></span></div>
+          <div class="qprompt" id="qPrompt"></div>
+          <div class="qchoices" id="qChoices"></div>
+          <div class="qtimer" id="qTimer"><div id="qTimerFill"></div></div>
+          <div class="qfoot" id="qFoot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hud">
+      <div class="hbox"><div class="hlabel">Topic</div><div id="hTopic">–</div><div id="hLayer"></div></div>
+      <div class="hbox"><div class="hlabel">Depth</div><div class="hval" id="hDepth">0<small> m</small></div></div>
+      <div class="hbox" id="airBox"><div class="hlabel">Air <span id="hAirPct" style="float:right;color:#fff">100%</span></div><div class="airbar"><div class="airfill" id="hAir"></div></div></div>
+      <div class="row2">
+        <div class="hbox"><div class="hlabel">Time</div><div class="hval" id="hTime">3:00</div></div>
+        <div class="hbox"><div class="hlabel">Correct</div><div class="hval" id="hRight">0</div></div>
+      </div>
+      <div class="hbox"><div class="hlabel">Score</div><div class="hval" id="hScore">0</div></div>
+      <div class="hbox keys grow">
+        <div><b>←</b><b>→</b> walk / dig sideways</div>
+        <div><b>↓</b> dig down &nbsp; <b>↑</b> dig up</div>
+        <div>Same colours break together.</div>
+        <div><b>✕</b> blocks are hard and cost air.</div>
+        <div>Grab <b style="background:#22c7ff;color:#fff">AIR</b> to refill.</div>
+        <div style="margin-top:6px"><button class="hbtn" id="pauseBtn">❚❚ Pause (P)</button></div>
+      </div>
+      <a class="menu" href="../../index.html">← All simulations</a>
+    </div>
+
+    <!-- start screen -->
+    <div class="screen show" id="menu">
+      <div class="mcols">
+        <div class="mcol">
+          <h1>Dig Deep!</h1>
+          <p class="tagline">Help Mo the mole dig down through the rock. When a rock falls on Mo, answer the question to smash it!</p>
+          <canvas id="moleArt" width="160" height="130"></canvas>
+          <ul class="how">
+            <li><b class="k">←</b> <b class="k">→</b> walk, or dig the block beside you</li>
+            <li><b class="k">↓</b> dig down &nbsp; <b class="k">↑</b> dig up</li>
+            <li>🟥 Blocks of the same colour break together.</li>
+            <li>🟫 <b>✕</b> blocks take 5 digs and cost air.</li>
+            <li>🫧 Air keeps going down. Grab <b>AIR</b> capsules.</li>
+            <li>🪨 Dig under blocks and they wobble, then fall. When one is about to hit Mo, pick the answer with <b class="k">←</b> <b class="k">↑</b> <b class="k">→</b>.</li>
+            <li>✅ Right: the rock smashes. ❌ Wrong: Mo loses air.</li>
+          </ul>
+        </div>
+        <div class="mcol">
+          <h2>1. Choose a topic</h2>
+          <div id="topicOpts"></div>
+          <h2 style="margin-top:6px">2. Choose a speed</h2>
+          <div class="speeds" id="speedOpts"></div>
+          <div class="center" style="margin-top:12px"><button class="big" id="startBtn">⛏️ Start digging</button></div>
+          <div class="center" style="margin-top:8px;font:700 13px Nunito;color:#f3dcc4">Each round lasts 3 minutes. Press Enter to start.</div>
+          <div class="center" style="margin-top:6px"><a class="menu" href="../../index.html">← All simulations</a></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- pause -->
+    <div class="screen" id="pause" style="background:rgba(20,10,4,.88)">
+      <div class="center" style="margin-top:200px">
+        <h1>Paused</h1>
+        <p class="tagline" id="pauseTopic"></p>
+        <div style="margin-top:20px;display:flex;gap:14px;justify-content:center">
+          <button class="big" id="resumeBtn">▶ Resume</button>
+          <button class="big alt" id="quitBtn">Change topic</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- end -->
+    <div class="screen" id="end">
+      <h1 id="endTitle">Time's up!</h1>
+      <p class="tagline" id="endSub"></p>
+      <div class="stats">
+        <div class="stat"><div class="v" id="eDepth">0</div><div class="l">metres deep</div></div>
+        <div class="stat"><div class="v" id="eRight">0/0</div><div class="l">questions right</div></div>
+        <div class="stat"><div class="v" id="eAcc">0%</div><div class="l">accuracy</div></div>
+        <div class="stat"><div class="v" id="eScore">0</div><div class="l">score</div></div>
+      </div>
+      <div class="recap" id="eRecap"></div>
+      <div style="margin-top:14px;display:flex;gap:14px;justify-content:center">
+        <button class="big" id="againBtn">⛏️ Play again</button>
+        <button class="big alt" id="changeBtn">Change topic</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =========================================================
+   Settings
+   ========================================================= */
+const COLS = 9, CELL = 60, VIEW = 11, ROWS = 1500, SURF = 3, ROUND = 180;
+const X = 5, AIR = 6, ROCK = 7;
+const DIRS = [[1,0],[-1,0],[0,1],[0,-1]];
+const COLORS = { 1: ['#ff5a5f','#b8353a','#ffa3a5'], 2: ['#ffc93c','#c08c12','#ffe8a0'], 3: ['#3ecf8e','#1f8f5a','#9af2c8'], 4: ['#4aa8ff','#2366b8','#aed8ff'] };
+const SPEEDS = {
+  relaxed:   { name: 'Relaxed',   icon: '🐢', desc: 'Slow air, hints come early', drain: 0.7,  wob: 1.6, rumble: 9, hint: 8,  count: 0 },
+  normal:    { name: 'Normal',    icon: '🙂', desc: 'A hint after 15 s',          drain: 1.0,  wob: 1.3, rumble: 7, hint: 15, count: 0 },
+  challenge: { name: 'Challenge', icon: '🔥', desc: '12 s to answer, no hints',   drain: 1.35, wob: 1.0, rumble: 6, hint: 0,  count: 12 }
+};
+const TOPICS = {
+  time:  { name: 'Time',  icon: '⏰', desc: 'Telling time to the minute · h and min ⇄ min · How long?',
+           layers: ['Telling time to the minute', 'Hours and minutes ⇄ minutes', 'Measuring time: how long?'] },
+  money: { name: 'Money', icon: '💰', desc: 'Counting notes and coins · $ ⇄ ¢ · Comparing amounts',
+           layers: ['Counting money', 'Dollars ⇄ cents', 'Count, convert and compare'] },
+  mult:  { name: 'Multiplication & Division', icon: '✖️', desc: 'Tables of 2, 3, 4, 5 and 10 · Using ÷ · Fact families',
+           layers: ['Times tables 2, 3, 4, 5, 10', 'Using ÷', 'Missing numbers and fact families'] }
+};
+const LAYER_AT = [0, 120, 280];    // depth (m) where each layer starts...
+const LAYER_TIME = [0, 70, 130];   // ...or seconds into the round, whichever comes first
+const LAYER_BG = [['#5a3820','#3a2312'], ['#3f3358','#251d38'], ['#1f4a58','#102a33']];
+const TAGS = {
+  add: 'Added the numbers instead of multiplying (e.g. 4 × 6 → 10).',
+  nextfact: 'Picked the next or previous fact in the times table. Count the groups carefully.',
+  divsub: 'Subtracted instead of dividing. ÷ means sharing equally or making equal groups.',
+  related: 'Mixed up the numbers in a fact family. If 3 × 6 = 18, then 18 ÷ 6 = 3 and 18 ÷ 3 = 6.',
+  hour100: 'Treated 1 hour as 100 minutes. Remember: 1 h = 60 min.',
+  hourhand: 'Read the hour hand wrongly. Check which number the short hand has just passed.',
+  minmark: 'Miscounted the minute marks. Count on in 5s, then count the small marks one by one.',
+  handswap: 'Swapped the hour hand and the minute hand. The short hand shows the hour.',
+  regroup: 'Subtracted hours and minutes separately. Count on from the start time instead.',
+  durhour: 'Counted the hours wrongly when finding how long.',
+  endhour: 'Forgot that 60 minutes make 1 more hour.',
+  zero: 'Dropped the zero in the cents. $4.05 = 405¢, not 45¢.',
+  times10: 'Used 10 instead of 100. Remember: $1 = 100¢.',
+  swap: 'Mixed up the order of the cents digits.',
+  miscount: 'Missed out or added a coin when counting. Count notes first, then coins from biggest to smallest.',
+  notation: 'Wrote the cents wrongly. 5 cents is written .05 and 50 cents is .50.',
+  compare: 'Compared amounts wrongly. Change them all to cents first, then compare.',
+  timeout: 'Ran out of time on some questions.'
+};
+
+/* =========================================================
+   Helpers
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function rr(g, x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+/* =========================================================
+   Sound
+   ========================================================= */
+let actx = null;
+function tone(f, d = 0.1, type = 'square', vol = 0.06, slide = 0) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + d + 0.02);
+  } catch (e) {}
+}
+const sfx = {
+  dig: () => tone(220, 0.06, 'square', 0.04, -80),
+  pop: () => { tone(520, 0.08, 'triangle', 0.07, 300); },
+  hard: () => tone(120, 0.08, 'sawtooth', 0.05, -40),
+  air: () => { tone(660, 0.1, 'sine', 0.08, 400); setTimeout(() => tone(990, 0.12, 'sine', 0.07), 90); },
+  wobble: () => tone(90, 0.25, 'triangle', 0.06, 30),
+  rumble: () => { tone(60, 0.5, 'sawtooth', 0.07, -20); tone(75, 0.45, 'square', 0.03, -25); },
+  thud: () => tone(80, 0.12, 'square', 0.06, -40),
+  alarm: () => { tone(880, 0.09, 'square', 0.06); setTimeout(() => tone(660, 0.09, 'square', 0.06), 110); },
+  good: () => { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.08), i * 70)); },
+  bad: () => { tone(200, 0.25, 'sawtooth', 0.07, -120); },
+  chain: () => { [700, 900, 1200].forEach((f, i) => setTimeout(() => tone(f, 0.08, 'triangle', 0.07), i * 60)); },
+  faint: () => tone(400, 0.6, 'sine', 0.08, -330)
+};
+
+/* =========================================================
+   Questions
+   ========================================================= */
+function finish(q, correct, ds, filler) {
+  const seen = new Set([correct]); const out = [{ text: correct, ok: true }];
+  for (const d of ds) {
+    if (out.length >= 3) break;
+    if (d && d.text != null && !seen.has(d.text) && !/(^|\D)-|NaN/.test(d.text)) { seen.add(d.text); out.push({ text: d.text, ok: false, tag: d.tag }); }
+  }
+  let guard = 0;
+  while (out.length < 3 && guard++ < 80) { const t = filler(); if (!seen.has(t)) { seen.add(t); out.push({ text: t, ok: false, tag: 'other' }); } }
+  q.choices = shuffle(out); q.answer = correct; return q;
+}
+
+/* ---- multiplication & division ---- */
+function qMult(L, easy) {
+  const T = easy ? [2, 5, 10] : [2, 3, 4, 5, 10];
+  const a = pick(T); let b = ri(2, 10);
+  let kind = L === 0 ? 'mul' : L === 1 ? pick(['div', 'div', 'divword', 'mul']) : pick(['miss', 'missdiv', 'related', 'family', 'div']);
+  if ((kind === 'related' || kind === 'family' || kind === 'missdiv') && a === b) b = b === 10 ? 9 : b + 1;
+  const p = a * b;
+  const fillN = n => () => String(Math.max(1, n + pick([-6, -4, -3, -2, -1, 1, 2, 3, 4, 6])));
+  switch (kind) {
+    case 'mul': {
+      const [x, y] = Math.random() < 0.5 ? [a, b] : [b, a];
+      return finish({ obj: '3.1', label: 'Times tables', prompt: `<div>${x} × ${y} = ?</div>`, plain: `${x} × ${y}`,
+        tip: `${x} × ${y} means ${x} groups of ${y}. ${x} × ${y} = ${p}.` },
+        String(p), [{ text: String(x + y), tag: 'add' }, { text: String(a * (b + 1)), tag: 'nextfact' }, { text: String(a * (b - 1)), tag: 'nextfact' }], fillN(p));
+    }
+    case 'div':
+      return finish({ obj: '3.2', label: 'Using ÷', prompt: `<div>${p} ÷ ${a} = ?</div>`, plain: `${p} ÷ ${a}`,
+        tip: `Think: ${a} × ? = ${p}. ${a} × ${b} = ${p}, so ${p} ÷ ${a} = ${b}.` },
+        String(b), [{ text: String(p - a), tag: 'divsub' }, { text: String(b + 1), tag: 'nextfact' }, { text: String(b - 1), tag: 'nextfact' }], fillN(b));
+    case 'divword': {
+      const ctx = pick([['sweets', 'children', 'child'], ['stickers', 'friends', 'friend'], ['apples', 'baskets', 'basket'], ['marbles', 'boxes', 'box']]);
+      return finish({ obj: '3.2', label: 'Using ÷', prompt: `<div class="sub">${p} ${ctx[0]} are shared equally among ${a} ${ctx[1]}.</div><div>How many does each ${ctx[2]} get?</div>`,
+        plain: `${p} ${ctx[0]} shared among ${a} ${ctx[1]}`, tip: `${p} ÷ ${a} = ${b}, because ${a} × ${b} = ${p}.` },
+        String(b), [{ text: String(p - a), tag: 'divsub' }, { text: String(b + 1), tag: 'nextfact' }, { text: String(p + a), tag: 'add' }], fillN(b));
+    }
+    case 'miss':
+      return finish({ obj: '3.4', label: 'Missing number', prompt: `<div>? × ${a} = ${p}</div>`, plain: `? × ${a} = ${p}`,
+        tip: `${p} ÷ ${a} = ${b}, so ${b} × ${a} = ${p}.` },
+        String(b), [{ text: String(p - a), tag: 'divsub' }, { text: String(b + 1), tag: 'nextfact' }, { text: String(b - 1), tag: 'nextfact' }], fillN(b));
+    case 'missdiv':
+      return finish({ obj: '3.4', label: 'Missing number', prompt: `<div>${p} ÷ ? = ${b}</div>`, plain: `${p} ÷ ? = ${b}`,
+        tip: `${b} × ${a} = ${p}, so ${p} ÷ ${a} = ${b}.` },
+        String(a), [{ text: String(p - b), tag: 'divsub' }, { text: String(a + 1), tag: 'nextfact' }, { text: String(a + b), tag: 'add' }], fillN(a));
+    case 'related':
+      return finish({ obj: '3.3', label: '× and ÷ are related', prompt: `<div class="sub">${a} × ${b} = ${p}</div><div>So, ${p} ÷ ${b} = ?</div>`, plain: `${a} × ${b} = ${p}, so ${p} ÷ ${b}`,
+        tip: `${a} × ${b} = ${p} and ${p} ÷ ${b} = ${a} are in the same fact family.` },
+        String(a), [{ text: String(b), tag: 'related' }, { text: String(p - b), tag: 'divsub' }, { text: String(a + 1), tag: 'nextfact' }], fillN(a));
+    case 'family':
+    default:
+      return finish({ obj: '3.3', label: '× and ÷ are related', prompt: `<div class="sub">Which fact is in the same family as</div><div>${a} × ${b} = ${p}?</div>`, plain: `Same family as ${a} × ${b} = ${p}`,
+        tip: `${a} × ${b} = ${p} goes with ${p} ÷ ${a} = ${b} and ${p} ÷ ${b} = ${a}.` },
+        `${p} ÷ ${a} = ${b}`, [{ text: `${p} − ${a} = ${p - a}`, tag: 'divsub' }, { text: `${a} + ${b} = ${a + b}`, tag: 'add' }], () => `${p} ÷ ${a} = ${b + ri(1, 3)}`);
+  }
+}
+
+/* ---- time ---- */
+const hh = h => ((h - 1) % 12 + 12) % 12 + 1;
+const tf = (h, m) => `${hh(h + Math.floor(m / 60))}:${String(((m % 60) + 60) % 60).padStart(2, '0')}`;
+const hm = mins => { const h = Math.floor(mins / 60), m = mins % 60; return h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`; };
+function clockSVG(h, m, s) {
+  let t = '';
+  for (let i = 0; i < 60; i++) {
+    const a = i * 6 * Math.PI / 180, r1 = i % 5 ? 82 : 75;
+    t += `<line x1="${(100 + Math.sin(a) * r1).toFixed(1)}" y1="${(100 - Math.cos(a) * r1).toFixed(1)}" x2="${(100 + Math.sin(a) * 89).toFixed(1)}" y2="${(100 - Math.cos(a) * 89).toFixed(1)}" stroke="#1b2a41" stroke-width="${i % 5 ? 1.6 : 3.6}"/>`;
+  }
+  for (let i = 1; i <= 12; i++) {
+    const a = i * 30 * Math.PI / 180;
+    t += `<text x="${(100 + Math.sin(a) * 62).toFixed(1)}" y="${(100 - Math.cos(a) * 62 + 8).toFixed(1)}" text-anchor="middle" font-family="Baloo 2, sans-serif" font-weight="800" font-size="23" fill="#1b2a41">${i}</text>`;
+  }
+  const ha = ((h % 12) + m / 60) * 30 * Math.PI / 180, ma = m * 6 * Math.PI / 180;
+  return `<svg width="${s}" height="${s}" viewBox="0 0 200 200"><circle cx="100" cy="100" r="95" fill="#fff" stroke="#1b2a41" stroke-width="6"/>${t}` +
+    `<line x1="100" y1="100" x2="${(100 + Math.sin(ha) * 44).toFixed(1)}" y2="${(100 - Math.cos(ha) * 44).toFixed(1)}" stroke="#c0392b" stroke-width="9" stroke-linecap="round"/>` +
+    `<line x1="100" y1="100" x2="${(100 + Math.sin(ma) * 78).toFixed(1)}" y2="${(100 - Math.cos(ma) * 78).toFixed(1)}" stroke="#1b2a41" stroke-width="5" stroke-linecap="round"/>` +
+    `<circle cx="100" cy="100" r="7" fill="#1b2a41"/></svg>`;
+}
+function qTime(L, easy) {
+  const r = Math.random();
+  const kind = L === 0 ? 'read' : L === 1 ? (r < 0.3 ? 'read' : r < 0.65 ? 'toMin' : 'toHM') : (r < 0.4 ? 'dur' : r < 0.7 ? 'end' : pick(['toMin', 'toHM']));
+  if (kind === 'read') {
+    const h = ri(1, 12); let m = easy ? 5 * ri(1, 11) : ri(1, 59);
+    if (!easy && m % 5 === 0) m = Math.min(59, m + ri(1, 4));
+    const tip = `The short hand shows the hour. It has passed ${hh(h)}${m >= 30 ? ` but not reached ${hh(h + 1)}` : ''}. The long hand shows ${m} minutes. It is ${tf(h, m)}.`;
+    return finish({ obj: '2.1', label: 'Telling time', prompt: `<div class="sub">What time does the clock show?</div>${clockSVG(h, m, 190)}`, plain: `Clock showing ${tf(h, m)}`, tip },
+      tf(h, m), [{ text: m >= 30 ? tf(h + 1, m) : tf(h - 1, m), tag: 'hourhand' }, { text: tf(h, m + 5 <= 59 ? m + 5 : m - 5), tag: 'minmark' }, { text: tf(Math.round(m / 5) || 12, (h % 12) * 5), tag: 'handswap' }],
+      () => tf(h, clamp(m + pick([-10, -3, -2, 2, 3, 10]), 0, 59)));
+  }
+  if (kind === 'toMin') {
+    const h = ri(1, easy ? 2 : 3), m = easy ? 5 * ri(1, 11) : ri(1, 59), n = h * 60 + m;
+    return finish({ obj: '2.3', label: 'h and min → min', prompt: `<div>${h} h ${m} min = ? min</div>`, plain: `${h} h ${m} min = ? min`,
+      tip: `1 h = 60 min, so ${h} h = ${h * 60} min. ${h * 60} + ${m} = ${n} min.` },
+      `${n} min`, [{ text: `${h * 100 + m} min`, tag: 'hour100' }, { text: `${n + 10} min`, tag: 'other' }, { text: `${n - 10} min`, tag: 'other' }], () => `${n + pick([-20, -5, 5, 20])} min`);
+  }
+  if (kind === 'toHM') {
+    let n; do { n = easy ? 5 * ri(13, 40) : ri(61, 239); } while (n % 60 === 0);
+    const h = Math.floor(n / 60), m = n % 60;
+    const h100 = n >= 100 && n % 100 > 0 ? `${Math.floor(n / 100)} h ${n % 100} min` : null;
+    return finish({ obj: '2.3', label: 'min → h and min', prompt: `<div>${n} min = ? h ? min</div>`, plain: `${n} min = ? h ? min`,
+      tip: `60 min = 1 h. ${n} = ${h * 60} + ${m}, so ${n} min = ${h} h ${m} min.` },
+      `${h} h ${m} min`, [{ text: h100, tag: 'hour100' }, { text: `${h + 1} h ${m} min`, tag: 'other' }, { text: `${h} h ${m >= 50 ? m - 10 : m + 10} min`, tag: 'other' }],
+      () => `${h} h ${clamp(m + pick([-15, -5, 5, 15]), 1, 59)} min`);
+  }
+  if (kind === 'dur') {
+    const h1 = ri(1, 10), m1 = 5 * ri(0, 11), d = 5 * ri(4, easy ? 24 : 40);
+    const s = h1 * 60 + m1, e = s + d, h2 = Math.floor(e / 60), m2 = e % 60;
+    const ds = [{ text: hm(d + 60), tag: 'durhour' }];
+    if (m2 < m1) ds.unshift({ text: `${h2 - h1} h ${m1 - m2} min`, tag: 'regroup' });
+    if (d > 60) ds.push({ text: hm(d - 60), tag: 'durhour' });
+    ds.push({ text: hm(d + 10), tag: 'other' });
+    const dh = Math.floor(d / 60), dm = d % 60;
+    const tip = dh ? `Count on: ${tf(h1, m1)} → ${tf(h1 + dh, m1)} is ${dh} h. Then ${tf(h1 + dh, m1)} → ${tf(h2, m2)} is ${dm} min. Total ${hm(d)}.` : `Count on from ${tf(h1, m1)} to ${tf(h2, m2)}: ${hm(d)}.`;
+    const lab = t => easy ? `<span style="font-size:16px">${t}</span>` : '';
+    return finish({ obj: '2.2', label: 'Measuring time', prompt: `<div class="sub">How long is it from the start time to the end time?</div><div class="clocks"><div>${clockSVG(h1, m1, 140)}Start ${lab(tf(h1, m1))}</div><div>${clockSVG(h2, m2, 140)}End ${lab(tf(h2, m2))}</div></div>`,
+      plain: `From ${tf(h1, m1)} to ${tf(h2, m2)}`, tip }, hm(d), ds, () => hm(Math.max(5, d + pick([-20, -15, 15, 20]))));
+  }
+  // end time
+  const h1 = ri(1, 11), m1 = 5 * ri(0, 11), d = 5 * ri(4, easy ? 12 : 30);
+  const e = h1 * 60 + m1 + d;
+  const ds = [];
+  if (m1 + (d % 60) >= 60) ds.push({ text: tf(h1 + Math.floor(d / 60), (m1 + d) % 60), tag: 'endhour' });
+  ds.push({ text: tf(Math.floor(e / 60) + 1, e % 60), tag: 'durhour' }, { text: tf(Math.floor(e / 60), (e % 60 + 10) % 60), tag: 'other' });
+  const what = pick(['show', 'lesson', 'movie', 'swimming class', 'party', 'football match']);
+  return finish({ obj: '2.2', label: 'Measuring time', prompt: `<div class="sub">A ${what} starts at <b>${tf(h1, m1)}</b>. It lasts <b>${hm(d)}</b>.</div><div>When does it end?</div>`,
+    plain: `Starts ${tf(h1, m1)}, lasts ${hm(d)}`, tip: `${tf(h1, m1)} + ${hm(d)} = ${tf(Math.floor(e / 60), e % 60)}. Remember 60 min make 1 h.` },
+    tf(Math.floor(e / 60), e % 60), ds, () => tf(Math.floor(e / 60), (e % 60 + pick([5, 15, 20, 50])) % 60));
+}
+
+/* ---- money ---- */
+const $f = c => '$' + (c / 100).toFixed(2);
+const cf = c => c + '¢';
+const pieceLabel = v => v >= 100 ? '$' + v / 100 : v + '¢';
+const rev2 = c => { const s = String(c).padStart(2, '0'); return Number(s[1] + s[0]); };
+function wallet(easy) {
+  const ps = []; const note = pick(easy ? [0, 200, 500] : [0, 200, 500, 1000]);
+  if (note) ps.push(note);
+  for (let i = ri(0, 2); i > 0; i--) ps.push(100);
+  const pool = easy ? [50, 20, 10] : [50, 20, 10, 5];
+  for (let i = easy ? ri(2, 3) : ri(3, 5); i > 0; i--) ps.push(pick(pool));
+  let T = ps.reduce((s, v) => s + v, 0);
+  if (T < 100) { ps.push(100); T += 100; }
+  if (T % 100 === 0) { ps.push(easy ? 20 : pick([5, 10, 20])); }
+  ps.sort((a, b) => b - a);
+  return { ps, T: ps.reduce((s, v) => s + v, 0) };
+}
+const moneyHTML = ps => `<div class="pieces">${ps.map(v => `<span class="mny ${v >= 200 ? 'note' : 'coin'} v${v}">${pieceLabel(v)}</span>`).join('')}</div>`;
+function qMoney(L, easy) {
+  const r = Math.random();
+  const kind = L === 0 ? (r < 0.8 ? 'count' : 'write') : L === 1 ? (r < 0.45 ? 'toC' : r < 0.85 ? 'toD' : 'write') : (r < 0.4 ? 'countC' : r < 0.7 ? 'compare' : pick(['toC', 'toD']));
+  if (kind === 'count' || kind === 'countC') {
+    const { ps, T } = wallet(easy); const D = Math.floor(T / 100), C = T % 100;
+    const small = ps[ps.length - 1], big = ps.find(v => v < 100) || 50;
+    if (kind === 'count') {
+      const ds = [{ text: $f(T - small), tag: 'miscount' }];
+      if (rev2(C) !== C) ds.push({ text: $f(D * 100 + rev2(C)), tag: 'swap' });
+      ds.push({ text: $f(T + big), tag: 'miscount' });
+      return finish({ obj: '1.1', label: 'Counting money', prompt: `<div class="sub">How much money is there?</div>${moneyHTML(ps)}`, plain: `Count: ${ps.map(pieceLabel).join(' + ')}`,
+        tip: `Notes and $1 coins: $${D}. Coins: ${C}¢. Altogether ${$f(T)}.` }, $f(T), ds, () => $f(T + pick([-50, -20, 10, 30, 100])));
+    }
+    const ds = [{ text: cf(T - small), tag: 'miscount' }];
+    if (C < 10) ds.push({ text: cf(D * 10 + C), tag: 'zero' });
+    ds.push({ text: cf(T + big), tag: 'miscount' }, { text: cf(D * 10 + Math.floor(C / 10)), tag: 'times10' });
+    return finish({ obj: '1.1 + 1.4', label: 'Count and convert', prompt: `<div class="sub">How many <b>cents</b> is this altogether?</div>${moneyHTML(ps)}`, plain: `Count in cents: ${ps.map(pieceLabel).join(' + ')}`,
+      tip: `Altogether it is ${$f(T)}. $1 = 100¢, so ${$f(T)} = ${T}¢.` }, cf(T), ds, () => cf(T + pick([-50, -10, 20, 100])));
+  }
+  const d = ri(1, easy ? 9 : 20), c = Math.random() < 0.45 ? ri(1, 9) : 5 * ri(2, 19), n = d * 100 + c;
+  if (kind === 'write') {
+    const toDec = Math.random() < 0.6;
+    if (toDec) {
+      return finish({ obj: '1.2', label: 'Writing money', prompt: `<div class="sub">How do we write this amount?</div><div>${d} dollars ${c} cents</div>`, plain: `${d} dollars ${c} cents`,
+        tip: `${c} cents is written as .${String(c).padStart(2, '0')}, so it is ${$f(n)}.` },
+        $f(n), [{ text: c < 10 ? `$${d}.${c}0` : $f(d * 100 + rev2(c)), tag: c < 10 ? 'notation' : 'swap' }, { text: `$${d}${String(c).padStart(2, '0')}`, tag: 'notation' }, { text: $f(n + 100), tag: 'other' }],
+        () => $f(n + pick([-10, 10, -100])));
+    }
+    return finish({ obj: '1.2', label: 'Reading money', prompt: `<div class="sub">How do we read this amount?</div><div>${$f(n)}</div>`, plain: `Read ${$f(n)}`,
+      tip: `${$f(n)} is ${d} dollars and ${c} cents.` },
+      `${d} dollars ${c} cents`, [{ text: c < 10 ? `${d} dollars ${c * 10} cents` : `${d} dollars ${rev2(c)} cents`, tag: c < 10 ? 'notation' : 'swap' }, { text: `${n} dollars`, tag: 'notation' }, { text: `${d + 1} dollars ${c} cents`, tag: 'other' }],
+      () => `${d} dollars ${c + 10} cents`);
+  }
+  if (kind === 'toC') {
+    const ds = c < 10 ? [{ text: cf(Number(`${d}${c}`)), tag: 'zero' }, { text: cf(d * 1000 + c), tag: 'times10' }] : [{ text: cf(d * 10 + Math.floor(c / 10)), tag: 'times10' }, { text: cf(d * 1000 + c), tag: 'times10' }];
+    ds.push({ text: cf(n + 100), tag: 'other' });
+    return finish({ obj: '1.4', label: '$ → ¢', prompt: `<div>${$f(n)} = ? ¢</div>`, plain: `${$f(n)} = ? ¢`,
+      tip: `$1 = 100¢, so $${d} = ${d * 100}¢. ${d * 100}¢ + ${c}¢ = ${n}¢.` }, cf(n), ds, () => cf(n + pick([-10, 10, 50, -100])));
+  }
+  if (kind === 'toD') {
+    const ds = [c < 10 ? { text: `$${d}.${c}0`, tag: 'zero' } : { text: $f(d * 100 + rev2(c)), tag: 'swap' }, { text: '$' + (n / 10).toFixed(2), tag: 'times10' }, { text: `$${n}.00`, tag: 'times10' }];
+    return finish({ obj: '1.4', label: '¢ → $', prompt: `<div>${n}¢ = $ ?</div>`, plain: `${n}¢ = $ ?`,
+      tip: `100¢ = $1. ${n}¢ = ${d * 100}¢ + ${c}¢ = $${d} and ${c}¢ = ${$f(n)}.` }, $f(n), ds, () => $f(n + pick([-10, 10, 100])));
+  }
+  // compare
+  const base = ri(2, 15) * 100; let x = ri(1, 9), y = ri(1, 9); while (y === x) y = ri(1, 9);
+  const vals = shuffle([base + x * 10 + y, base + y * 10 + x, base + x]);
+  const ci = ri(0, 2);
+  const txt = vals.map((v, i) => i === ci ? cf(v) : $f(v));
+  const most = Math.random() < 0.6;
+  const target = most ? Math.max(...vals) : Math.min(...vals);
+  const ti = vals.indexOf(target);
+  return finish({ obj: '1.3', label: 'Comparing money', prompt: `<div class="sub">Which amount is the <b>${most ? 'most' : 'least'}</b>?</div><div style="font-size:26px">${txt.join(' &nbsp;·&nbsp; ')}</div>`,
+    plain: `Which is the ${most ? 'most' : 'least'}: ${txt.join(', ')}`,
+    tip: `Change all to cents: ${vals.map(cf).join(', ')}. The ${most ? 'most' : 'least'} is ${txt[ti]}.` },
+    txt[ti], txt.filter((_, i) => i !== ti).map(t => ({ text: t, tag: 'compare' })), () => $f(base + 99));
+}
+
+function makeQuestion() {
+  const L = layerOf();
+  let q, guard = 0;
+  do { q = topic === 'time' ? qTime(L, easyNext) : topic === 'money' ? qMoney(L, easyNext) : qMult(L, easyNext); }
+  while (recentQ.includes(q.plain) && guard++ < 12);
+  recentQ.push(q.plain); if (recentQ.length > 8) recentQ.shift();
+  return q;
+}
+
+/* =========================================================
+   Game state
+   ========================================================= */
+const cv = $('cv'), g = cv.getContext('2d');
+let grid = [], objs = [], parts = [], pops = [];
+let mole, camY, mode = 'menu', topic = 'mult', speed = 'normal', SP = SPEEDS.normal;
+let air, score, timeLeft, maxDepth, layerShown, sinceQ, sinceRumble, dirty, shake, idleT, actCD, lastDir;
+let stats, recentQ, easyNext, wrongStreak;
+let curQ = null, curObj = null, qT = 0, qAnswered = false, qCloseT = 0, qHint = false;
+const held = {};
+let tapQ = null;   // a quick tap is remembered until Mo is ready to act
+
+const depth = () => Math.max(0, mole.r - (SURF - 1));
+const layerOf = () => {
+  const t = ROUND - timeLeft;
+  for (let L = 2; L > 0; L--) if (maxDepth >= LAYER_AT[L] || t >= LAYER_TIME[L]) return L;
+  return 0;
+};
+
+function genWorld() {
+  grid = [];
+  for (let r = 0; r < ROWS; r++) {
+    const row = [];
+    for (let c = 0; c < COLS; c++) {
+      if (r < SURF) { row.push(null); continue; }
+      const d = r - SURF;
+      if (d > 2 && Math.random() < Math.min(0.12, 0.03 + d * 0.0008)) { row.push({ t: X, hp: 5 }); continue; }
+      const left = c > 0 ? row[c - 1] : null, up = r > SURF ? grid[r - 1][c] : null, q = Math.random();
+      let t;
+      if (left && left.t <= 4 && q < 0.25) t = left.t;
+      else if (up && up.t <= 4 && q < 0.42) t = up.t;
+      else t = ri(1, 4);
+      row.push({ t });
+    }
+    grid.push(row);
+  }
+  for (let r = SURF + 7; r < ROWS - 2; r += ri(8, 13)) grid[r][ri(0, COLS - 1)] = { t: AIR };
+}
+
+function newGame() {
+  SP = SPEEDS[speed];
+  genWorld(); objs = []; parts = []; pops = [];
+  mole = { r: SURF - 1, c: 4, dx: 0, dy: 0, face: 1, drill: null, drillT: 0, dizzy: 0, faint: 0, shield: 0 };
+  camY = mole.r - 4; air = 100; score = 0; timeLeft = ROUND; maxDepth = 0; layerShown = 0;
+  sinceQ = 0; sinceRumble = 0; dirty = true; shake = 0; idleT = 0; actCD = 0; lastDir = null;
+  stats = { total: 0, right: 0, tags: {}, missed: [], faints: 0, noHint: 0 };
+  recentQ = []; easyNext = false; wrongStreak = 0;
+  for (const k in held) held[k] = false;
+  tapQ = null;
+  $('hTopic').textContent = `${TOPICS[topic].icon} ${TOPICS[topic].name}`;
+  showScreen(null);
+  mode = 'play';
+  banner('Topic', `${TOPICS[topic].icon} ${TOPICS[topic].name}`, `Layer 1: ${TOPICS[topic].layers[0]}`, 2600);
+}
+
+/* =========================================================
+   Grid logic
+   ========================================================= */
+function flood(r, c) {
+  const t = grid[r][c].t;
+  if (t > 4) return [[r, c]];
+  const out = [], seen = new Set([r * COLS + c]), st = [[r, c]];
+  while (st.length) {
+    const [a, b] = st.pop(); out.push([a, b]);
+    for (const [da, db] of DIRS) {
+      const na = a + da, nb = b + db;
+      if (na < 0 || na >= ROWS || nb < 0 || nb >= COLS) continue;
+      const k = na * COLS + nb; if (seen.has(k)) continue;
+      const n = grid[na][nb];
+      if (n && n.t === t && !n.wob) { seen.add(k); st.push([na, nb]); }
+    }
+  }
+  return out;
+}
+
+function fallingAt(r, c) {
+  for (const o of objs) {
+    if (o.state !== 'fall') continue;
+    for (const p of o.cells) { if (p.c !== c) continue; const top = p.r + o.y; if (top < r + 1 && top + 1 > r) return true; }
+  }
+  return false;
+}
+const free = (r, c) => r >= 0 && r < ROWS && c >= 0 && c < COLS && !grid[r][c] && !fallingAt(r, c);
+
+// Find blocks with nothing holding them up and make them wobble.
+function settle() {
+  dirty = false;
+  const lo = Math.max(0, mole.r - 14), hi = Math.min(ROWS - 1, mole.r + 14);
+  const gid = new Map(), groups = [];
+  for (let r = lo; r <= hi; r++) for (let c = 0; c < COLS; c++) {
+    const cell = grid[r][c]; if (!cell || cell.wob) continue;
+    const k = r * COLS + c; if (gid.has(k)) continue;
+    const cells = flood(r, c), g2 = { cells, sup: false, id: groups.length };
+    for (const [a, b] of cells) gid.set(a * COLS + b, g2.id);
+    if (cells.some(([a]) => a >= hi)) g2.sup = true;
+    groups.push(g2);
+  }
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const gr of groups) {
+      if (gr.sup) continue;
+      for (const [a, b] of gr.cells) {
+        const id = gid.get((a + 1) * COLS + b);
+        if (id !== undefined && id !== gr.id && groups[id].sup) { gr.sup = true; changed = true; break; }
+      }
+    }
+  }
+  const uns = groups.filter(gr => !gr.sup); if (!uns.length) return;
+  const parent = uns.map((_, i) => i), find = i => parent[i] === i ? i : (parent[i] = find(parent[i]));
+  const idx = new Map(uns.map((gr, i) => [gr.id, i]));
+  uns.forEach((gr, i) => {
+    for (const [a, b] of gr.cells) for (const [da, db] of DIRS) {
+      const na = a + da, nb = b + db; if (nb < 0 || nb >= COLS) continue;
+      const id = gid.get(na * COLS + nb);
+      if (id !== undefined && idx.has(id)) parent[find(i)] = find(idx.get(id));
+    }
+  });
+  const sets = new Map();
+  uns.forEach((gr, i) => { const root = find(i); if (!sets.has(root)) sets.set(root, []); sets.get(root).push(...gr.cells); });
+  for (const cells of sets.values()) {
+    const o = { cells: cells.map(([r, c]) => ({ r, c, cell: grid[r][c] })), y: 0, state: 'wob', t: SP.wob, v: 12 };
+    o.cells.forEach(p => p.cell.wob = o);
+    objs.push(o);
+  }
+  sfx.wobble();
+}
+
+function startFall(o) {
+  if (o.spawned && o.cells[0].c !== mole.c && mole.r > o.cells[0].r) {
+    // the falling rock follows Mo, so it can't be dodged (option A)
+    const p = o.cells[0]; let ok = true;
+    for (let r = p.r; r < mole.r; r++) if (grid[r][mole.c]) { ok = false; break; }
+    if (ok) { grid[p.r][p.c] = null; p.c = mole.c; grid[p.r][p.c] = p.cell; }
+  }
+  for (const p of o.cells) if (grid[p.r][p.c] === p.cell) grid[p.r][p.c] = null;
+  o.state = 'fall'; o.y = 0;
+  dirty = true;
+}
+
+function hitsMole(o) {
+  return o.cells.some(p => p.c === mole.c && p.r + o.y + 1 > mole.r + 0.04 && p.r + o.y < mole.r + 1);
+}
+
+function moveFall(o, dt) {
+  let step = o.v * dt;
+  while (step > 1e-6) {
+    const k = Math.floor(o.y + 1e-6);
+    const canGo = o.cells.every(p => { const nr = p.r + k + 1; return nr < ROWS && !grid[nr][p.c]; });
+    if (!canGo) { land(o, k); return; }
+    const d = Math.min(step, k + 1 - o.y); o.y += d; step -= d;
+    if (hitsMole(o)) { rockHitsMole(o); return; }
+  }
+}
+
+function land(o, k) {
+  o.y = k;
+  const landed = [];
+  for (const p of o.cells) {
+    const nr = p.r + k; p.cell.wob = null;
+    if (p.cell.t === ROCK) { p.cell.t = X; p.cell.hp = 3; }
+    grid[nr][p.c] = p.cell; landed.push([nr, p.c]);
+  }
+  objs.splice(objs.indexOf(o), 1);
+  sfx.thud();
+  checkPops(landed);
+  dirty = true;
+}
+
+function checkPops(list) {
+  let total = 0; const done = new Set();
+  for (const [r, c] of list) {
+    const cell = grid[r][c];
+    if (!cell || cell.t > 4 || cell.wob || done.has(r * COLS + c)) continue;
+    const gr = flood(r, c); gr.forEach(([a, b]) => done.add(a * COLS + b));
+    if (gr.length >= 4) { for (const [a, b] of gr) { burst(a, b, COLORS[cell.t][0], 6); grid[a][b] = null; } total += gr.length; }
+  }
+  if (total) { score += total * 20; popup(mole.r - 1, mole.c, `Chain! +${total * 20}`, '#ffe066'); sfx.chain(); dirty = true; }
+}
+
+function rumble() {
+  sinceRumble = 0; shake = 0.45; sfx.rumble();
+  let n = 0;
+  while (n < 4 && free(mole.r - n - 1, mole.c)) n++;
+  let o;
+  if (n > 0) {
+    const r = mole.r - n, cell = { t: ROCK }; grid[r][mole.c] = cell;
+    o = { cells: [{ r, c: mole.c, cell }], y: 0, state: 'wob', t: 0.6, v: 18, spawned: true };
+  } else {
+    const r = mole.r - 1; if (r < 0) return;
+    const cell = grid[r][mole.c]; if (!cell || cell.wob) return;
+    cell.t = ROCK; delete cell.hp;
+    o = { cells: [{ r, c: mole.c, cell }], y: 0, state: 'wob', t: 0.7, v: 18, spawned: false };
+  }
+  o.cells[0].cell.wob = o; objs.push(o); dirty = true;
+  popup(mole.r - 1, mole.c, 'Rumble!', '#ffb36b');
+}
+
+/* =========================================================
+   Mo the mole
+   ========================================================= */
+function act(dir) {
+  const dc = dir === 'L' ? -1 : dir === 'R' ? 1 : 0, dr = dir === 'D' ? 1 : dir === 'U' ? -1 : 0;
+  if (dc) mole.face = dc;
+  const tr = mole.r + dr, tc = mole.c + dc;
+  if (tc < 0 || tc >= COLS || tr < 0 || tr >= ROWS) return 0.12;
+  const cell = grid[tr][tc];
+  if (!cell) {
+    if (dc && !fallingAt(tr, tc)) { mole.c = tc; mole.dx = -dc; return 0.11; }
+    return 0.1;
+  }
+  mole.drill = dir; mole.drillT = 0.16;
+  if (cell.wob) { sfx.hard(); return 0.15; }
+  if (cell.t === AIR) {
+    grid[tr][tc] = null; getAir(tr, tc);
+    if (dc) { mole.c = tc; mole.dx = -dc; }
+    dirty = true; return 0.12;
+  }
+  if (cell.t === ROCK) { sfx.hard(); return 0.15; }
+  if (cell.t === X) {
+    cell.hp--; burst(tr, tc, '#a0703f', 3); sfx.hard();
+    if (cell.hp <= 0) { grid[tr][tc] = null; air = Math.max(0, air - 15); popup(tr, tc, '−15% air', '#ff8080'); burst(tr, tc, '#8d5a2b', 10); dirty = true; }
+    return 0.15;
+  }
+  const gr = flood(tr, tc);
+  for (const [a, b] of gr) { burst(a, b, COLORS[cell.t][0], 5); grid[a][b] = null; }
+  score += gr.length * 10; sfx.dig(); if (gr.length > 1) sfx.pop();
+  dirty = true; return 0.2;
+}
+
+function getAir(r, c) {
+  air = Math.min(100, air + 20); sfx.air(); popup(r, c, '+20% air', '#8cf3ff'); burst(r, c, '#8cf3ff', 10);
+}
+
+/* =========================================================
+   Questions in play
+   ========================================================= */
+function rockHitsMole(o) {
+  if (o.cells.every(p => p.cell.t === AIR)) {
+    objs.splice(objs.indexOf(o), 1); o.cells.forEach(p => getAir(p.r, p.c)); return;
+  }
+  if (mole.shield > 0) {
+    // helmet still glowing from the last question: the rock just breaks
+    objs.splice(objs.indexOf(o), 1);
+    for (const p of o.cells) burst(p.r + o.y, p.c, p.cell.t <= 4 ? COLORS[p.cell.t][0] : '#9aa0a6', 8);
+    sfx.pop(); dirty = true; return;
+  }
+  // rest the rock just on top of Mo while the question is open
+  let maxY = Infinity;
+  for (const p of o.cells) if (p.c === mole.c && p.r < mole.r + 1) maxY = Math.min(maxY, mole.r - 1 - p.r + 0.12);
+  if (maxY !== Infinity) o.y = Math.min(o.y, maxY);
+  curObj = o; curQ = makeQuestion(); mode = 'question';
+  qT = 0; qAnswered = false; qCloseT = 0; qHint = false;
+  for (const k in held) held[k] = false;
+  sfx.alarm();
+  const T = TOPICS[topic];
+  $('qTopic').textContent = `${T.icon} ${T.name} · ${curQ.label}`;
+  $('qPrompt').innerHTML = curQ.prompt;
+  const keys = ['←', '↑', '→'];
+  $('qChoices').innerHTML = curQ.choices.map((ch, i) => `<button class="ch" data-i="${i}"><span class="key">${keys[i]}</span><span class="txt${ch.text.length > 9 ? ' long' : ''}">${ch.text}</span></button>`).join('');
+  $('qChoices').querySelectorAll('.ch').forEach(b => b.onclick = () => answer(+b.dataset.i));
+  $('qFoot').className = 'qfoot'; $('qFoot').textContent = SP.count ? '' : 'Take your time. The game waits for you.';
+  $('qTimer').style.display = SP.count ? 'block' : 'none'; $('qTimerFill').style.width = '100%';
+  $('qwrap').classList.add('show');
+}
+
+function answer(i) {
+  if (qAnswered) return;
+  qAnswered = true;
+  const btns = $('qChoices').querySelectorAll('.ch');
+  const ok = i >= 0 && curQ.choices[i].ok;
+  stats.total++;
+  if (ok) {
+    stats.right++; wrongStreak = 0; easyNext = false;
+    const bonus = qHint ? 0 : 50; if (!qHint) stats.noHint++;
+    score += 100 + bonus; air = Math.min(100, air + 5);
+    btns[i].classList.add('good');
+    $('qFoot').className = 'qfoot'; $('qFoot').innerHTML = `<b style="color:#1f8f5a">Smashed it! +${100 + bonus}${bonus ? ' (no-hint bonus!)' : ''}</b>`;
+    sfx.good(); qCloseT = 0.9;
+  } else {
+    wrongStreak++; easyNext = wrongStreak >= 2;
+    const tag = i < 0 ? 'timeout' : curQ.choices[i].tag;
+    if (tag && tag !== 'other') stats.tags[tag] = (stats.tags[tag] || 0) + 1;
+    stats.missed.push({ q: curQ.plain, a: curQ.answer, picked: i < 0 ? '(no answer)' : curQ.choices[i].text });
+    air = Math.max(0, air - 25);
+    if (i >= 0) btns[i].classList.add('bad');
+    btns[curQ.choices.findIndex(c => c.ok)].classList.add('good');
+    $('qFoot').className = 'qfoot tip'; $('qFoot').innerHTML = `${i < 0 ? '⏰ Out of time! ' : '❌ Ouch! −25% air. '}<b>${curQ.tip}</b>`;
+    sfx.bad(); qCloseT = 3.2; mole.dizzy = 1.2;
+  }
+}
+
+function closeQuestion() {
+  $('qwrap').classList.remove('show');
+  const o = curObj;
+  if (o && objs.includes(o)) {
+    objs.splice(objs.indexOf(o), 1);
+    for (const p of o.cells) { if (grid[p.r] && grid[p.r][p.c] === p.cell) grid[p.r][p.c] = null; burst(p.r + o.y, p.c, p.cell.t <= 4 ? COLORS[p.cell.t][0] : '#9aa0a6', 12); }
+  }
+  curObj = null; curQ = null; mode = 'play'; sinceQ = 0; dirty = true; shake = 0.2; mole.shield = 3;
+  if (timeLeft <= 0) endRound();
+}
+
+/* =========================================================
+   Effects
+   ========================================================= */
+function burst(r, c, col, n) {
+  for (let i = 0; i < n; i++) parts.push({ x: (c + 0.5) * CELL, y: (r + 0.5) * CELL, vx: (Math.random() - 0.5) * 320, vy: -Math.random() * 260, life: 0.6 + Math.random() * 0.4, col, s: 4 + Math.random() * 5 });
+}
+function popup(r, c, text, col) { pops.push({ x: (c + 0.5) * CELL, y: (r + 0.3) * CELL, text, col, life: 1.2 }); }
+let bannerTimer = null;
+function banner(t, m, s, ms) {
+  $('bT').textContent = t; $('bM').textContent = m; $('bS').textContent = s;
+  $('banner').classList.add('show'); clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => $('banner').classList.remove('show'), ms);
+}
+
+/* =========================================================
+   Update
+   ========================================================= */
+function update(dt) {
+  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; }
+  parts = parts.filter(p => p.life > 0);
+  for (const p of pops) { p.y -= 40 * dt; p.life -= dt; }
+  pops = pops.filter(p => p.life > 0);
+  if (shake > 0) shake -= dt;
+
+  if (mode === 'question') {
+    qT += dt;
+    camY += (mole.r - 1.9 - camY) * Math.min(1, dt * 8);   // keep Mo and the rock above the panel
+    if (!qAnswered) {
+      if (SP.count) {
+        $('qTimerFill').style.width = `${Math.max(0, 100 - qT / SP.count * 100)}%`;
+        if (qT >= SP.count) answer(-1);
+      } else if (!qHint && qT >= SP.hint) {
+        qHint = true;
+        const btns = $('qChoices').querySelectorAll('.ch');
+        const wrong = curQ.choices.map((c, i) => c.ok ? -1 : i).filter(i => i >= 0);
+        btns[pick(wrong)].classList.add('faded');
+        $('qFoot').textContent = '💡 Hint: one wrong answer has been taken away.';
+      }
+    } else {
+      qCloseT -= dt; if (qCloseT <= 0) closeQuestion();
+    }
+    return;
+  }
+  if (mode !== 'play') return;
+
+  timeLeft -= dt;
+  if (timeLeft <= 0) { timeLeft = 0; endRound(); return; }
+
+  // mole animation
+  mole.dx = Math.sign(mole.dx) * Math.max(0, Math.abs(mole.dx) - dt * 9);
+  mole.dy = Math.sign(mole.dy) * Math.max(0, Math.abs(mole.dy) - dt * 10);
+  if (mole.drillT > 0) { mole.drillT -= dt; if (mole.drillT <= 0) mole.drill = null; }
+  if (mole.dizzy > 0) mole.dizzy -= dt;
+  if (mole.shield > 0) mole.shield -= dt;
+  actCD -= dt;
+
+  const busy = mole.dx !== 0 || mole.dy !== 0 || mole.faint > 0;
+  if (mole.faint > 0) {
+    mole.faint -= dt;
+    if (mole.faint <= 0) { air = 100; popup(mole.r - 1, mole.c, 'Air refilled!', '#8cf3ff'); }
+  }
+  // gravity for Mo
+  if (!busy && free(mole.r + 1, mole.c)) { mole.r++; mole.dy = -1; }
+  else if (!busy) {
+    const dir = tapQ || (held[lastDir] ? lastDir : ['L', 'R', 'D', 'U'].find(k => held[k]));
+    if (dir && actCD <= 0) { tapQ = null; actCD = act(dir); }
+  }
+  const anyHeld = held.L || held.R || held.U || held.D;
+  idleT = anyHeld ? 0 : idleT + dt;
+
+  // air
+  if (mole.faint <= 0) {
+    air -= SP.drain * (idleT > 0.8 ? 0.5 : 1) * dt;
+    if (air <= 0) {
+      air = 0; mole.faint = 1.6; stats.faints++; score = Math.max(0, score - 100);
+      sfx.faint(); popup(mole.r - 1, mole.c, 'Out of air!', '#ff8080');
+    }
+  }
+
+  // depth and layers
+  const d = depth();
+  if (d > maxDepth) { score += (d - maxDepth) * 10; maxDepth = d; }
+  const L = layerOf();
+  if (L > layerShown) {
+    layerShown = L;
+    banner(`Layer ${L + 1} of 3`, TOPICS[topic].layers[L], 'The rock changes colour. New questions ahead!', 2600);
+    sfx.chain();
+  }
+
+  // falling blocks
+  for (const o of objs.slice()) {
+    if (mode !== 'play') break;
+    if (o.state === 'wob') { o.t -= dt; if (o.t <= 0) startFall(o); }
+    else moveFall(o, dt);
+  }
+  if (mode !== 'play') return;
+  if (dirty) settle();
+
+  // rumble keeps the questions coming
+  sinceQ += dt; sinceRumble += dt;
+  if (sinceQ > SP.rumble && sinceRumble > 3 && !objs.some(o => o.spawned !== undefined) && mole.faint <= 0 && mole.dy === 0) rumble();
+
+  camY += (mole.r + mole.dy - 4 - camY) * Math.min(1, dt * 6);
+}
+
+/* =========================================================
+   Draw
+   ========================================================= */
+function drawBlock(x, y, cell, r, c) {
+  const t = cell.t;
+  if (t <= 4) {
+    const [base, dark, light] = COLORS[t];
+    const same = (a, b) => { const n = grid[a] && grid[a][b]; return n && n.t === t && !!n.wob === !!cell.wob; };
+    const L = c > 0 && same(r, c - 1) ? 0 : 3, R = c < COLS - 1 && same(r, c + 1) ? 0 : 3;
+    const T = same(r - 1, c) ? 0 : 3, B = same(r + 1, c) ? 0 : 3;
+    g.fillStyle = dark; rr(g, x + L, y + T, CELL - L - R, CELL - T - B, (L && R && T && B) ? 10 : 4); g.fill();
+    g.fillStyle = base; rr(g, x + L, y + T, CELL - L - R, CELL - T - B - (B ? 6 : 0), (L && R && T && B) ? 10 : 4); g.fill();
+    if (T) { g.fillStyle = light; rr(g, x + L + 7, y + T + 5, CELL - L - R - 14, 6, 3); g.fill(); }
+    g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x + 18, y + 22, 5, 0, Math.PI * 2); g.fill();
+  } else if (t === X) {
+    g.fillStyle = '#5c3a1c'; rr(g, x + 2, y + 2, CELL - 4, CELL - 4, 8); g.fill();
+    g.fillStyle = '#8d5a2b'; rr(g, x + 5, y + 5, CELL - 10, CELL - 12, 6); g.fill();
+    g.strokeStyle = '#f3dcc4'; g.lineWidth = 6; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x + 19, y + 18); g.lineTo(x + 41, y + 40); g.moveTo(x + 41, y + 18); g.lineTo(x + 19, y + 40); g.stroke();
+    const dmg = 5 - (cell.hp || 5);
+    if (dmg > 0) {
+      g.strokeStyle = '#2a1a0e'; g.lineWidth = 2.5; g.beginPath();
+      const cr = [[10, 8, 22, 20], [50, 10, 40, 24], [12, 50, 24, 38], [48, 50, 36, 36]];
+      for (let i = 0; i < Math.min(dmg, 4); i++) { g.moveTo(x + cr[i][0], y + cr[i][1]); g.lineTo(x + cr[i][2], y + cr[i][3]); }
+      g.stroke();
+    }
+  } else if (t === AIR) {
+    const bob = Math.sin(performance.now() / 250 + c) * 3;
+    g.fillStyle = 'rgba(140,243,255,.25)'; g.beginPath(); g.arc(x + 30, y + 30 + bob, 27, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#22c7ff'; rr(g, x + 10, y + 16 + bob, 40, 28, 14); g.fill();
+    g.fillStyle = '#ffffff'; rr(g, x + 10, y + 16 + bob, 20, 28, 14); g.fill();
+    g.fillStyle = '#1b2a41'; g.font = "800 14px 'Baloo 2', sans-serif"; g.textAlign = 'center'; g.fillText('AIR', x + 30, y + 35 + bob);
+  } else if (t === ROCK) {
+    g.fillStyle = '#4b4f55'; g.beginPath(); g.moveTo(x + 8, y + 50); g.lineTo(x + 4, y + 26); g.lineTo(x + 18, y + 6); g.lineTo(x + 44, y + 5); g.lineTo(x + 57, y + 24); g.lineTo(x + 52, y + 52); g.closePath(); g.fill();
+    g.fillStyle = '#80868e'; g.beginPath(); g.moveTo(x + 12, y + 44); g.lineTo(x + 9, y + 26); g.lineTo(x + 20, y + 11); g.lineTo(x + 42, y + 10); g.lineTo(x + 51, y + 25); g.lineTo(x + 47, y + 44); g.closePath(); g.fill();
+    g.strokeStyle = '#3a3d42'; g.lineWidth = 2; g.beginPath(); g.moveTo(x + 22, y + 16); g.lineTo(x + 30, y + 30); g.lineTo(x + 26, y + 40); g.moveTo(x + 30, y + 30); g.lineTo(x + 42, y + 34); g.stroke();
+  }
+}
+
+function drawMole(ctx, x, y, s, face, o = {}) {
+  ctx.save(); ctx.translate(x, y); ctx.scale(face * s / 60, s / 60);
+  const now = performance.now();
+  if (o.drill) {
+    ctx.save();
+    ctx.rotate(o.drill === 'D' ? Math.PI / 2 : o.drill === 'U' ? -Math.PI / 2 : 0);
+    ctx.fillStyle = '#c9ced6'; ctx.beginPath(); ctx.moveTo(16, -10); ctx.lineTo(40, 0); ctx.lineTo(16, 10); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#6b737e'; ctx.lineWidth = 2; const off = (now / 30) % 8;
+    ctx.beginPath(); for (let i = 0; i < 3; i++) { const xx = 19 + i * 7 + off * 0.5; ctx.moveTo(xx, -8 + i * 2.5); ctx.lineTo(xx + 3, 8 - i * 2.5); } ctx.stroke();
+    ctx.restore();
+  }
+  // feet
+  ctx.fillStyle = '#f2a7b5';
+  ctx.beginPath(); ctx.ellipse(-10, 25, 7, 4, 0, 0, Math.PI * 2); ctx.ellipse(9, 25, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+  // body
+  ctx.fillStyle = '#6e4326'; ctx.beginPath(); ctx.ellipse(0, 6, 22, 20, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c99f78'; ctx.beginPath(); ctx.ellipse(5, 13, 13, 11, 0, 0, Math.PI * 2); ctx.fill();
+  // snout and nose
+  ctx.fillStyle = '#d9b18e'; ctx.beginPath(); ctx.ellipse(19, 4, 9, 7, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ff6f91'; ctx.beginPath(); ctx.arc(27, 2, 4.5, 0, Math.PI * 2); ctx.fill();
+  // paws
+  ctx.fillStyle = '#f2a7b5'; ctx.beginPath(); ctx.ellipse(17, 17, 6, 4, -0.4, 0, Math.PI * 2); ctx.fill();
+  // eyes
+  if (o.faint) {
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(6, -7); ctx.lineTo(13, -1); ctx.moveTo(13, -7); ctx.lineTo(6, -1); ctx.stroke();
+  } else {
+    ctx.fillStyle = '#111'; ctx.beginPath(); ctx.arc(10, -4, 3.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(11, -5, 1.2, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = '#ff9fb0'; ctx.beginPath(); ctx.arc(12, 4, 3, 0, Math.PI * 2); ctx.fill();
+  // helmet + lamp
+  ctx.fillStyle = '#ffc93c'; ctx.beginPath(); ctx.arc(0, -8, 19, Math.PI, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e0a91a'; rr(ctx, -22, -10, 44, 6, 3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,245,180,.35)'; ctx.beginPath(); ctx.arc(9, -20, 10, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#fff6b0'; ctx.beginPath(); ctx.arc(9, -20, 5, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  if (o.dizzy) {
+    ctx.save(); ctx.fillStyle = '#ffe066'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    for (let i = 0; i < 3; i++) { const a = now / 200 + i * 2.1; ctx.fillText('★', x + Math.cos(a) * 18, y - 30 + Math.sin(a) * 5); }
+    ctx.restore();
+  }
+}
+
+function draw() {
+  g.save();
+  g.clearRect(0, 0, cv.width, cv.height);
+  if (shake > 0) g.translate((Math.random() - 0.5) * 10 * shake, (Math.random() - 0.5) * 10 * shake);
+  const top = camY;
+  const bg = LAYER_BG[layerShown];
+  const grd = g.createLinearGradient(0, 0, 0, cv.height); grd.addColorStop(0, bg[0]); grd.addColorStop(1, bg[1]);
+  g.fillStyle = grd; g.fillRect(-20, -20, cv.width + 40, cv.height + 40);
+  const r0 = Math.floor(top) - 1, r1 = Math.ceil(top + VIEW) + 1;
+  // sky
+  const skyBottom = (SURF - top) * CELL;
+  if (skyBottom > 0) {
+    const sg = g.createLinearGradient(0, skyBottom - 200, 0, skyBottom); sg.addColorStop(0, '#7fd3ff'); sg.addColorStop(1, '#cdeffd');
+    g.fillStyle = sg; g.fillRect(-20, -20, cv.width + 40, skyBottom + 20);
+    g.fillStyle = '#5cbf4a'; g.fillRect(-20, skyBottom - 8, cv.width + 40, 10);
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(90, skyBottom - 120, 40, 14, 0, 0, Math.PI * 2); g.ellipse(400, skyBottom - 150, 50, 16, 0, 0, Math.PI * 2); g.fill();
+  }
+  // grid
+  for (let r = Math.max(0, r0); r <= Math.min(ROWS - 1, r1); r++) for (let c = 0; c < COLS; c++) {
+    const cell = grid[r][c]; if (!cell) continue;
+    let x = c * CELL, y = (r - top) * CELL;
+    if (cell.wob && cell.wob.state === 'wob') x += Math.sin(performance.now() / 28 + r) * 3.5;
+    drawBlock(x, y, cell, r, c);
+    if (cell.wob && cell.wob.state === 'wob' && cell.t === ROCK) {
+      g.fillStyle = '#ff4d4d'; g.font = "800 26px 'Baloo 2', sans-serif"; g.textAlign = 'center'; g.fillText('!', x + 30, y - 4);
+    }
+  }
+  // falling blocks
+  for (const o of objs) if (o.state === 'fall') for (const p of o.cells) drawBlock(p.c * CELL, (p.r + o.y - top) * CELL, p.cell, -99, p.c);
+  // mole (with a glow while the helmet shield is on)
+  if (mole && mole.shield > 0) {
+    const mx = (mole.c + mole.dx + 0.5) * CELL, my = (mole.r + mole.dy - top + 0.5) * CELL;
+    g.strokeStyle = `rgba(255,224,102,${0.35 + 0.35 * Math.sin(performance.now() / 90)})`; g.lineWidth = 5;
+    g.beginPath(); g.arc(mx, my, 32, 0, Math.PI * 2); g.stroke();
+  }
+  if (mole) drawMole(g, (mole.c + mole.dx + 0.5) * CELL, (mole.r + mole.dy - top + 0.5) * CELL, CELL * 0.95, mole.face, { drill: mole.drill, dizzy: mole.dizzy > 0, faint: mole.faint > 0 });
+  // particles & popups
+  for (const p of parts) { g.globalAlpha = Math.min(1, p.life * 2); g.fillStyle = p.col; g.fillRect(p.x - p.s / 2, p.y - top * CELL - p.s / 2, p.s, p.s); }
+  g.globalAlpha = 1;
+  g.textAlign = 'center'; g.font = "800 20px 'Baloo 2', sans-serif";
+  for (const p of pops) {
+    g.globalAlpha = Math.min(1, p.life * 1.5); g.lineWidth = 4; g.strokeStyle = '#1b2a41';
+    g.strokeText(p.text, p.x, p.y - top * CELL); g.fillStyle = p.col; g.fillText(p.text, p.x, p.y - top * CELL);
+  }
+  g.globalAlpha = 1;
+  // darkness at the bottom, light around Mo
+  const vg = g.createLinearGradient(0, cv.height - 120, 0, cv.height); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.45)');
+  g.fillStyle = vg; g.fillRect(-20, cv.height - 120, cv.width + 40, 140);
+  g.restore();
+}
+
+let hudCache = {};
+function setHud(id, v, html) { if (hudCache[id] === v) return; hudCache[id] = v; if (html) $(id).innerHTML = v; else $(id).textContent = v; }
+function hud() {
+  if (!mole) return;
+  setHud('hDepth', `${maxDepth}<small> m</small>`, true);
+  const a = Math.round(clamp(air, 0, 100));
+  $('hAir').style.width = a + '%'; setHud('hAirPct', a + '%');
+  $('airBox').classList.toggle('low', a < 25);
+  const s = Math.ceil(timeLeft); setHud('hTime', `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+  $('hTime').style.color = s <= 20 ? '#ff8080' : '#fff';
+  setHud('hRight', `${stats.right}<small>/${stats.total}</small>`, true);
+  setHud('hScore', String(score));
+  setHud('hLayer', `Layer ${layerShown + 1} of 3: ${TOPICS[topic].layers[layerShown]}`);
+}
+
+/* =========================================================
+   Screens
+   ========================================================= */
+function showScreen(id) {
+  ['menu', 'pause', 'end'].forEach(s => $(s).classList.toggle('show', s === id));
+}
+function endRound() {
+  if (mode === 'question') return;  // finish the open question first
+  mode = 'end';
+  const acc = stats.total ? Math.round(stats.right / stats.total * 100) : 0;
+  const key = `digdeep-best-${topic}-${speed}`, best = Number(store(key) || 0);
+  const newBest = score > best; if (newBest) store(key, String(score));
+  $('endTitle').textContent = newBest ? "Time's up! New best score! 🏆" : "Time's up!";
+  $('endSub').textContent = `${TOPICS[topic].icon} ${TOPICS[topic].name} · ${SPEEDS[speed].icon} ${SPEEDS[speed].name}${!newBest && best ? ` · Best: ${best}` : ''}`;
+  $('eDepth').textContent = maxDepth;
+  $('eRight').textContent = `${stats.right}/${stats.total}`;
+  $('eAcc').textContent = acc + '%';
+  $('eScore').textContent = score;
+  let h = '';
+  const tags = Object.entries(stats.tags).sort((a, b) => b[1] - a[1]);
+  if (!stats.total) h += '<b>No rocks fell on Mo this round.</b> Dig under blocks to make them fall!';
+  else if (!tags.length && !stats.missed.length) h += '<b class="ok">🌟 Perfect round! Every rock smashed.</b>';
+  if (tags.length) h += '<b>Mistakes to watch:</b><ul>' + tags.map(([t, n]) => `<li>${TAGS[t] || t} <b>(${n}×)</b></li>`).join('') + '</ul>';
+  if (stats.missed.length) h += '<b>Questions to practise:</b><ul>' + stats.missed.slice(-6).map(m => `<li>${m.q} → <b class="ok">${m.a}</b> <span style="opacity:.7">(you picked ${m.picked})</span></li>`).join('') + '</ul>';
+  if (stats.faints) h += `<div>Mo ran out of air ${stats.faints} time${stats.faints > 1 ? 's' : ''}. Grab AIR capsules and avoid ✕ blocks.</div>`;
+  $('eRecap').innerHTML = h;
+  showScreen('end');
+}
+function pauseGame() {
+  if (mode !== 'play' && mode !== 'question') return;
+  pausedFrom = mode; mode = 'pause';
+  $('pauseTopic').textContent = `${TOPICS[topic].icon} ${TOPICS[topic].name}`;
+  showScreen('pause');
+}
+let pausedFrom = 'play';
+function resume() { if (mode !== 'pause') return; showScreen(null); mode = pausedFrom; last = performance.now(); }
+function toMenu() { mode = 'menu'; $('qwrap').classList.remove('show'); showScreen('menu'); }
+
+function buildMenu() {
+  $('topicOpts').innerHTML = Object.entries(TOPICS).map(([k, t]) => `<button class="opt${k === topic ? ' sel' : ''}" data-topic="${k}"><span class="ic">${t.icon}</span><span><div class="t">${t.name}</div><div class="d">${t.desc}</div></span></button>`).join('');
+  $('speedOpts').innerHTML = Object.entries(SPEEDS).map(([k, s]) => `<button class="opt${k === speed ? ' sel' : ''}" data-speed="${k}"><span class="t">${s.icon} ${s.name}</span><span class="d">${s.desc}</span></button>`).join('');
+  document.querySelectorAll('[data-topic]').forEach(b => b.onclick = () => { topic = b.dataset.topic; store('digdeep-topic', topic); buildMenu(); });
+  document.querySelectorAll('[data-speed]').forEach(b => b.onclick = () => { speed = b.dataset.speed; store('digdeep-speed', speed); buildMenu(); });
+}
+
+/* =========================================================
+   Input
+   ========================================================= */
+const KEYMAP = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D' };
+addEventListener('keydown', e => {
+  const k = KEYMAP[e.key];
+  if (k) e.preventDefault();
+  if (mode === 'menu' && e.key === 'Enter') { newGame(); return; }
+  if (mode === 'end' && e.key === 'Enter') { newGame(); return; }
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { if (mode === 'pause') resume(); else pauseGame(); return; }
+  if (mode === 'question' && !e.repeat) {
+    if (!qAnswered) { const i = { L: 0, U: 1, R: 2 }[k]; if (i !== undefined) answer(i); }
+    else if ((k || e.key === 'Enter') && qCloseT < 2.4) qCloseT = 0;   // skip ahead after a moment
+    return;
+  }
+  if (mode === 'play' && k) { if (!held[k]) { held[k] = true; lastDir = k; tapQ = k; } }
+});
+addEventListener('keyup', e => { const k = KEYMAP[e.key]; if (k) held[k] = false; });
+addEventListener('blur', () => { for (const k in held) held[k] = false; if (mode === 'play') pauseGame(); });
+
+$('startBtn').onclick = newGame;
+$('againBtn').onclick = newGame;
+$('changeBtn').onclick = toMenu;
+$('quitBtn').onclick = toMenu;
+$('resumeBtn').onclick = resume;
+$('pauseBtn').onclick = () => { if (mode === 'pause') resume(); else pauseGame(); };
+
+/* =========================================================
+   Loop + scaling
+   ========================================================= */
+function fit() {
+  const s = Math.min(innerWidth / 820, innerHeight / 684, 1.5);
+  $('stage').style.transform = `scale(${s})`;
+}
+addEventListener('resize', fit); fit();
+
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (mode === 'play' || mode === 'question') { update(dt); }
+  if (mole) { draw(); hud(); }
+  requestAnimationFrame(loop);
+}
+
+// menu art and preview world
+topic = store('digdeep-topic') || 'mult'; if (!TOPICS[topic]) topic = 'mult';
+speed = store('digdeep-speed') || 'normal'; if (!SPEEDS[speed]) speed = 'normal';
+buildMenu();
+(function art() {
+  const c = $('moleArt').getContext('2d');
+  c.clearRect(0, 0, 160, 130);
+  c.fillStyle = '#ff5a5f'; rr(c, 8, 92, 46, 34, 6); c.fill();
+  c.fillStyle = '#4aa8ff'; rr(c, 57, 92, 46, 34, 6); c.fill();
+  c.fillStyle = '#3ecf8e'; rr(c, 106, 92, 46, 34, 6); c.fill();
+  drawMole(c, 80, 56, 82, 1, { drill: 'D' });
+})();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
