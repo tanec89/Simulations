@@ -57,6 +57,14 @@
     -webkit-user-select:none; user-select:none; -webkit-font-smoothing:antialiased;
   }
   .hidden{ display:none !important; }
+  /* login page: illustrated background (sky in the middle keeps the card readable) */
+  body.on-login{ background:#BFE3FA url("login-bg.webp?v=3") center bottom / cover no-repeat fixed; }
+  /* landing page after login (levels, upload): its own illustration; panels made more solid to stay readable */
+  body.on-home{ background:#C7D3F4 url("home-bg.webp") center bottom / cover no-repeat fixed; }
+  body.on-home .panel, body.on-home button.navbtn:not(.on){ background:rgba(255,255,255,0.86); }
+  @media (prefers-color-scheme:dark){ body.on-home .panel, body.on-home button.navbtn:not(.on){ background:rgba(28,28,30,0.86); } }
+  body.on-login .login{ background:rgba(255,255,255,0.82); }
+  @media (prefers-color-scheme:dark){ body.on-login .login{ background:rgba(28,28,30,0.82); } }
 
   /* material */
   .panel,.nav,.chip{
@@ -87,7 +95,6 @@
   .subtitle{ color:var(--ink2); font-size:17px; margin:0 0 24px; }
   .note{ color:var(--ink2); font-size:15px; margin:8px 0 16px; }
   .note.ver{ font-size:13px; margin:16px 0 0; text-align:center; }
-  body.in-session h1, body.in-session .subtitle{ display:none; }
 
   /* cards */
   .panel{ border-radius:20px; box-shadow:var(--card-shadow); padding:24px; margin-bottom:16px;
@@ -129,7 +136,8 @@
   button.good{ background:var(--fill); color:var(--green-text); box-shadow:none; }
   button.bad{ background:var(--fill); color:var(--red-text); box-shadow:none; }
   .row{ display:flex; gap:8px; flex-wrap:wrap; }
-  .row > *{ flex:1 1 auto; }
+  .row > *{ flex:1 1 auto; min-width:0; }
+  .row > button{ white-space:normal; height:auto; min-height:44px; padding-top:8px; padding-bottom:8px; }
   .msg{ margin-top:16px; font-weight:600; font-size:15px; min-height:24px; color:var(--ink2); }
   .msg:empty{ margin-top:0; min-height:0; }
   .msg.err{ color:var(--red-text); } .msg.ok{ color:var(--green-text); }
@@ -137,6 +145,7 @@
 
   /* small elements */
   .chip{ display:inline-flex; align-items:center; height:32px; padding:0 16px; border-radius:8px; font-size:13px; font-weight:600; color:var(--ink2); white-space:nowrap; }
+  .nav .chip{ display:block; line-height:32px; min-width:0; overflow:hidden; text-overflow:ellipsis; }
   .tag{ display:inline-flex; align-items:center; height:24px; padding:0 8px; border-radius:8px; font-size:13px; font-weight:600; background:var(--fill); color:var(--ink2); white-space:nowrap; align-self:center; }
   .tag.learning{ color:var(--orange-text); } .tag.mastered{ color:var(--green-text); }
   .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:16px; }
@@ -227,10 +236,71 @@
   .revise .w b{ font-size:40px; display:block; font-family:var(--kai); }
   .revise .w span{ font-size:15px; color:var(--link); font-weight:600; }
 
+  /* home layout: sidebar (Upload File + Level) beside the main area */
+  .app.wide{ max-width:1088px; }
+  /* on wide screens keep the landing page in the clear band between the boy (left ~22%) and the girl (right ~78%)
+     of the background; the picture is 3:2 and "cover"-scaled, so its width on screen is max(100vw, 150vh) */
+  @media (min-width:1000px){ body.on-home .app.wide{ max-width:min(1120px, max(56vw, 84vh)); } }
+  .topgreet{ padding:16px 24px; }
+  .layout{ display:grid; grid-template-columns:176px minmax(0,1fr); gap:16px; align-items:start; }
+  .side{ position:sticky; top:64px; display:flex; flex-direction:column; gap:16px; }
+  .main{ min-width:0; }
+  button.navbtn{ width:100%; height:auto; min-height:88px; padding:16px 8px; border-radius:20px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+    background:var(--material); color:var(--ink); border:0.5px solid var(--material-border); box-shadow:var(--card-shadow);
+    -webkit-backdrop-filter:blur(20px) saturate(180%); backdrop-filter:blur(20px) saturate(180%); font-size:17px; font-weight:600; }
+  button.navbtn svg{ width:28px; height:28px; fill:var(--accent); }
+  button.navbtn.on{ background:var(--ink); color:var(--on-ink); }
+  button.navbtn.on svg{ fill:currentColor; }
+  .levels{ padding:16px; margin:0; }
+  .levels .label{ margin:0 0 8px; }
+  .lvlist{ display:flex; flex-direction:column; gap:8px; }
+  button.lvl{ background:var(--fill); color:var(--ink); box-shadow:none; height:48px; padding:0 16px;
+    display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:19px; }
+  button.lvl small{ font-size:13px; font-weight:600; color:var(--ink2); font-variant-numeric:tabular-nums; }
+  button.lvl.on{ background:var(--ink); color:var(--on-ink); }
+  button.lvl.on small{ color:inherit; opacity:0.72; }
+  button.lvl:disabled{ opacity:0.4; }
+  /* mascots: one 1536×1024 sheet of 8 pandas (4 × 2 cells of 384×512); each element shows one cell */
+  .mascot{ display:inline-block; aspect-ratio:3/4; background:url("mascots.webp") 0 0 / 400% 200% no-repeat; flex:none; }
+  .hello-row{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .hello-row .mascot{ height:72px; margin:-12px 0; }
+  .mascot-grid{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+  button.mascot-pick{ height:auto; padding:8px 8px 12px; border-radius:16px; background:var(--fill); color:var(--ink); box-shadow:none;
+    display:flex; flex-direction:column; align-items:center; gap:4px; font-size:15px; font-weight:600; white-space:normal;
+    outline:3px solid transparent; outline-offset:-3px; }
+  button.mascot-pick .mascot{ width:100%; max-width:132px; }
+  button.mascot-pick.on{ outline-color:var(--accent); background:rgba(0,122,255,0.12); }
+  @media (max-width:520px){ .mascot-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .chhead{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .chlist{ background:var(--fill); border-radius:12px; padding:0 16px; }
+  .chlist label.check{ margin:0; min-height:48px; font-size:17px; color:var(--ink); font-weight:400; cursor:pointer;
+    border-bottom:0.5px solid var(--material-border); }
+  .chlist label.check:last-child{ border-bottom:none; }
+  .chlist .chname{ flex:1; min-width:0; }
+  .chlist small{ font-size:13px; color:var(--ink2); white-space:nowrap; }
+  .tablewrap{ overflow-x:auto; border-radius:12px; background:var(--fill); margin:16px 0; }
+  .coltable{ border-collapse:collapse; width:100%; font-size:15px; white-space:nowrap; }
+  .coltable th,.coltable td{ text-align:left; padding:8px 12px; }
+  .coltable th{ color:var(--ink2); font-weight:600; border-bottom:0.5px solid var(--material-border); }
+  .zi-s{ font-family:var(--kai); font-size:19px; }
+  @media (max-width:760px){
+    .layout{ grid-template-columns:minmax(0,1fr); }
+    .side{ position:static; flex-direction:row; gap:8px; }
+    button.navbtn{ width:auto; min-height:0; height:auto; padding:8px 16px; flex:none; font-size:15px; }
+    button.navbtn svg{ width:22px; height:22px; }
+    .levels{ flex:1; min-width:0; padding:8px; }
+    .levels .label{ display:none; }
+    .lvlist{ flex-direction:row; overflow-x:auto; }
+    button.lvl{ flex:1 0 auto; padding:0 12px; justify-content:center; font-size:17px; }
+    button.lvl small{ display:none; }
+    .stats{ grid-template-columns:repeat(2,1fr); }
+  }
+
   @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
 </style>
 </head>
-<body>
+<body class="on-login">
 <nav class="nav">
   <div class="nav-in">
     <a class="back" href="../../index.html">‹ All simulations</a>
@@ -238,8 +308,6 @@
   </div>
 </nav>
 <div class="app">
-  <h1>Word Reading</h1>
-  <p class="subtitle">Read the word aloud · 读一读</p>
 
   <!-- LOGIN -->
   <div id="screen-login" class="panel login">
@@ -258,11 +326,74 @@
 
   <!-- HOME -->
   <div id="screen-home" class="hidden">
-    <div class="panel">
-      <div class="greeting">
-        <h2 id="hello">Hi!</h2>
-        <button class="small grey" id="logoutBtn">Log out</button>
+    <div class="panel greeting topgreet">
+      <div class="hello-row"><h2 id="hello">Hi!</h2><span class="mascot" id="helloMascot" role="img" aria-label="Mascot"></span></div>
+      <button class="small grey" id="logoutBtn">Log out</button>
+    </div>
+    <div class="layout">
+    <aside class="side">
+      <button class="navbtn" id="navUpload"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a1 1 0 0 1 .7.3l4 4a1 1 0 1 1-1.4 1.4L13 6.4V15a1 1 0 1 1-2 0V6.4L8.7 8.7a1 1 0 1 1-1.4-1.4l4-4A1 1 0 0 1 12 3zM5 14a1 1 0 0 1 1 1v3h12v-3a1 1 0 1 1 2 0v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/></svg><span>Upload File</span></button>
+      <nav class="panel levels" aria-label="Level">
+        <div class="label">Level</div>
+        <div class="lvlist" id="levelBtns"></div>
+      </nav>
+      <button class="navbtn" id="navSettings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.7 2l.4 2.6a8 8 0 0 1 1.9 1.1l2.5-1 1.7 3-2 1.6a8 8 0 0 1 0 2.2l2 1.6-1.7 3-2.5-1a8 8 0 0 1-1.9 1.1l-.4 2.6h-3.4l-.4-2.6a8 8 0 0 1-1.9-1.1l-2.5 1-1.7-3 2-1.6a8 8 0 0 1 0-2.2l-2-1.6 1.7-3 2.5 1a8 8 0 0 1 1.9-1.1l.4-2.6h3.4zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg><span>Settings</span></button>
+    </aside>
+    <main class="main">
+
+    <!-- UPLOAD PAGE -->
+    <section id="view-upload" class="hidden">
+      <div class="panel">
+        <h2>Upload a word list</h2>
+        <div class="tablewrap">
+          <table class="coltable">
+            <tr><th>Level</th><th>Book</th><th>Chapter</th><th>Chapter title</th><th>Word</th><th>Pinyin</th><th>Meaning</th></tr>
+            <tr><td>P2</td><td>A</td><td>9</td><td>今天是晴天</td><td class="zi-s">乌云</td><td>wū yún</td><td>dark clouds</td></tr>
+          </table>
+        </div>
+        <div class="row">
+          <button id="uploadBtn">Choose Excel file</button>
+          <button class="grey" id="tplBtn">Download template</button>
+          <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" class="hidden">
+        </div>
+        <div class="msg" id="uploadMsg"></div>
+        <div id="preview" class="hidden">
+          <div class="label">Found in <span id="pvName"></span></div>
+          <div class="wordlist sets" id="pvList"></div>
+          <p class="note" id="pvNote"></p>
+          <div class="row">
+            <button id="pvSave">Save</button>
+            <button class="grey" id="pvCancel">Cancel</button>
+          </div>
+        </div>
       </div>
+      <div class="panel">
+        <h2>Uploaded books</h2>
+        <p class="note hidden" id="bookNone">Nothing uploaded yet.</p>
+        <div class="wordlist sets" id="bookList"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section id="view-settings" class="hidden">
+      <div class="panel">
+        <h2>Choose your mascot</h2>
+        <p class="note">Your mascot shows next to your name every time you log in.</p>
+        <div class="mascot-grid" id="mascotGrid" role="radiogroup" aria-label="Mascot"></div>
+      </div>
+    </section>
+
+    <!-- LEVEL PAGE -->
+    <section id="view-level" class="hidden">
+      <div class="panel">
+        <h2 id="lvTitle">Primary 2</h2>
+        <div class="label">Book</div>
+        <div class="chips" id="bookChips"></div>
+        <p class="note" id="bookNote"></p>
+        <div class="label chhead"><span>Chapters · <span id="chCount"></span></span><button class="small grey" id="chAll">Select all</button></div>
+        <div class="chlist" id="chList"></div>
+      </div>
+      <div class="panel">
       <div class="stats">
         <div class="stat" data-filter="all" role="button" tabindex="0"><b id="stTotal">0</b><span>Words</span><i>View</i></div>
         <div class="stat" data-filter="new" role="button" tabindex="0"><b id="stNew">0</b><span>New</span><i>View</i></div>
@@ -277,21 +408,8 @@
       <div class="gap"></div>
       <button class="big" id="startBtn">Start reading</button>
       <div class="msg" id="homeMsg"></div>
-    </div>
-
-    <div class="panel">
-      <h2>Word lists</h2>
-      <p class="note">Upload an Excel file (.xlsx / .csv). Column A = word, B = pinyin (optional), C = meaning (optional). Each upload becomes its own list, which you can name and rename.</p>
-      <label for="setNameIn">Name for the new list</label>
-      <input id="setNameIn" type="text" autocomplete="off" placeholder="e.g. Book 2B (blank = use the file name)">
-      <div class="row" style="margin-top:16px">
-        <button class="grey" id="uploadBtn">Upload Excel</button>
-        <button class="grey" id="tplBtn">Download template</button>
-        <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" class="hidden">
       </div>
-      <div class="msg" id="uploadMsg"></div>
-      <div class="wordlist sets" id="setList"></div>
-    </div>
+    </section>
 
     <div class="panel">
       <h2>Tools</h2>
@@ -302,6 +420,8 @@
       </div>
       <div class="msg" id="micMsg"></div>
       <p class="note ver"></p>
+    </div>
+    </main>
     </div>
   </div>
 
@@ -364,11 +484,10 @@
 'use strict';
 
 /* ---------- constants ---------- */
-const APP_VERSION = '7';    // shown on screen so you can tell which version a device has loaded; bump on every release
+const APP_VERSION = '8';    // shown on screen so you can tell which version a device has loaded; bump on every release
 const TIME_LIMIT = 20;      // seconds to read a word
-const COUNT_CHOICES = [20, 40, 60, 80];          // "how many words today": a mix drawn from every list
+const COUNT_CHOICES = [20, 40, 60, 80];          // "how many words today": a mix drawn from the selected chapters
 const COUNT_DEFAULT = 20;
-const DEFAULT_SET = 'My words';                 // name for words uploaded before lists existed
 const RETRY_GAP = 3;        // a missed word comes back after this many other words in the same session
 const RETRY_MAX = 2;        // ...at most this many times per session
 const COL = 'flashcardProfiles';
@@ -447,6 +566,9 @@ function saveProfile(immediate){
 function show(name){
   ['login','home','session','summary'].forEach(s => $('screen-'+s).classList.toggle('hidden', s!==name));
   document.body.classList.toggle('in-session', name==='session');
+  document.querySelector('.app').classList.toggle('wide', name==='home');
+  document.body.classList.toggle('on-login', name==='login');
+  document.body.classList.toggle('on-home', name==='home');
   window.scrollTo(0,0);
 }
 
@@ -470,8 +592,16 @@ function enterProfile(id, data, name){
   pid = id;
   profile = data || { name: name || localStorage.getItem('cwr_last_name') || 'there', words:[], progress:{}, updatedAt:0 };
   profile.words = profile.words || []; profile.progress = profile.progress || {};
+  // lists uploaded before levels and chapters existed are cleared
+  const old = profile.words.some(o => !o.lv || !o.bk || !o.ch);
+  if(old){
+    profile.words = profile.words.filter(o => o.lv && o.bk && o.ch);
+    pruneProgress();
+    if(profile.prefs) delete profile.prefs.set;
+  }
+  view = 'level';
   $('passIn').value = ''; $('loginMsg').textContent = '';
-  if(!data) saveProfile(true);
+  if(!data || old) saveProfile(true);
   renderHome();
 }
 
@@ -526,85 +656,187 @@ if(auth) auth.onAuthStateChanged(async user=>{
 const prog = w => profile.progress[w] || (profile.progress[w] = {streak:0, attempts:0, right:0, wrong:0, last:0, mastered:false});
 // new = never read · mastered = read correctly the last time it was tested · learning = read wrongly the last time
 const statusOf = w => { const p = profile.progress[w]; return !p || !p.attempts ? 'new' : p.streak > 0 ? 'mastered' : 'learning'; };
-const learningWords = () => profile.words.filter(o => statusOf(o.w) === 'learning');
 
-/* word lists ("sets") and what the child chose to practise */
-const setOf = o => o.s || DEFAULT_SET;
-function setNames(){ const n = []; profile.words.forEach(o=>{ const s = setOf(o); if(!n.includes(s)) n.push(s); }); return n; }
-const wordsIn = name => profile.words.filter(o => setOf(o)===name);
-// today's choice: {set:'Book 1A'} = every word of that list, otherwise {n:20} = a mix of n words from all lists
-function choice(){
-  const pf = profile.prefs || (profile.prefs = {});
-  if(pf.set && !setNames().includes(pf.set)) pf.set = null;
-  if(pf.learn && !learningWords().length) pf.learn = false;
-  if(!COUNT_CHOICES.includes(pf.n)) pf.n = COUNT_DEFAULT;
-  return pf;
+/* word bank: every word carries its level (P1–P6), book (A/B), chapter number and chapter title */
+const LEVELS = ['P1','P2','P3','P4','P5','P6'];
+const BOOKS = ['A','B'];
+const pad2 = n => String(n).padStart(2,'0');
+const chKey = o => o.bk + '_' + pad2(o.ch);                                   // unique within a level
+const chCode = o => o.lv.slice(1) + o.bk + '_' + pad2(o.ch);                  // as printed on the card: 2A_09
+const chLabel = o => chCode(o) + (o.ct ? ' 《' + o.ct + '》' : '');            // 2A_09 《今天是晴天》
+const wordsOfLevel = lv => profile.words.filter(o => o.lv === lv);
+const booksOf = lv => BOOKS.filter(b => profile.words.some(o => o.lv===lv && o.bk===b));
+function chaptersOf(lv, books){   // [{key, label, count}] in book order, then chapter order
+  const m = new Map();
+  profile.words.forEach(o=>{
+    if(o.lv!==lv || !books.includes(o.bk)) return;
+    const k = chKey(o);
+    if(!m.has(k)) m.set(k, {key:k, label:chLabel(o), bk:o.bk, ch:o.ch, count:0});
+    m.get(k).count++;
+  });
+  return [...m.values()].sort((a,b)=> a.bk===b.bk ? a.ch-b.ch : (a.bk < b.bk ? -1 : 1));
+}
+function pruneProgress(){   // forget progress for words that are no longer in any list
+  const live = new Set(profile.words.map(o => o.w));
+  Object.keys(profile.progress).forEach(w => { if(!live.has(w)) delete profile.progress[w]; });
 }
 
+// what the child chose: level, book(s), chapters, and how many words
+let view = 'level';   // main area: 'level' or 'upload'
+function prefs(){
+  const pf = profile.prefs || (profile.prefs = {});
+  if(!COUNT_CHOICES.includes(pf.n)) pf.n = COUNT_DEFAULT;
+  if(!['n','all','learn'].includes(pf.mode)) pf.mode = 'n';
+  if(!pf.lv || !wordsOfLevel(pf.lv).length) pf.lv = LEVELS.find(l => wordsOfLevel(l).length) || null;
+  pf.chs = pf.chs || {};
+  if(pf.lv){
+    const have = booksOf(pf.lv);
+    if(!Array.isArray(pf.bk) || !pf.bk.length || pf.bk.some(b => !have.includes(b))){ pf.bk = have.slice(); pf.chs[pf.lv] = null; }
+    const all = chaptersOf(pf.lv, pf.bk).map(c => c.key);
+    pf.chs[pf.lv] = Array.isArray(pf.chs[pf.lv]) ? pf.chs[pf.lv].filter(k => all.includes(k)) : all;
+  }
+  return pf;
+}
+function selWords(){
+  const pf = prefs();
+  if(!pf.lv) return [];
+  const chs = pf.chs[pf.lv];
+  return profile.words.filter(o => o.lv===pf.lv && pf.bk.includes(o.bk) && chs.includes(chKey(o)));
+}
+const learningWords = () => selWords().filter(o => statusOf(o.w) === 'learning');
+
+const plural = (n, word) => n + ' ' + word + (n === 1 ? '' : 's');
 function el(tag, cls, text){ const e = document.createElement(tag); if(cls) e.className = cls; if(text != null) e.textContent = text; return e; }
+
+/* mascots: index into the 4 × 2 sheet, left to right, top row first */
+const MASCOTS = ['Explorer', 'Scholar', 'Wizard', 'Reader', 'Calligrapher', 'Lantern', 'Pilot', 'Sweetheart'];
+const mascotOf = () => Number.isInteger(profile.mascot) && profile.mascot >= 0 && profile.mascot < MASCOTS.length ? profile.mascot : 0;
+function paintMascot(node, i){ node.style.backgroundPosition = (i % 4) * 100/3 + '% ' + (i < 4 ? 0 : 100) + '%'; node.setAttribute('aria-label', MASCOTS[i] + ' panda'); }
+function renderSettings(){
+  const grid = $('mascotGrid'); grid.innerHTML = '';
+  MASCOTS.forEach((name, i)=>{
+    const b = el('button', 'mascot-pick' + (mascotOf()===i ? ' on' : ''));
+    b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(mascotOf()===i));
+    const m = el('span', 'mascot'); paintMascot(m, i);
+    b.appendChild(m); b.appendChild(el('span', null, name));
+    b.onclick = ()=>{ profile.mascot = i; saveProfile(true); refreshHome(); };
+    grid.appendChild(b);
+  });
+}
 
 function renderHome(){ show('home'); refreshHome(); }
 function refreshHome(){
-  $('hello').textContent = 'Hi ' + profile.name + '! 👋';
-  const pf = choice(), names = setNames(), words = profile.words;
-  const total = words.length;
+  $('hello').textContent = 'Hi ' + profile.name + '!';
+  paintMascot($('helloMascot'), mascotOf());
+  const pf = prefs();
+  if(!profile.words.length && view==='level') view = 'upload';
+
+  // sidebar
+  $('navUpload').classList.toggle('on', view==='upload');
+  $('navSettings').classList.toggle('on', view==='settings');
+  const lb = $('levelBtns'); lb.innerHTML = '';
+  LEVELS.forEach(lv=>{
+    const n = wordsOfLevel(lv).length;
+    const b = el('button', 'lvl' + (view==='level' && pf.lv===lv ? ' on' : ''));
+    b.appendChild(el('span', null, lv));
+    b.appendChild(el('small', null, n ? String(n) : '–'));
+    b.disabled = !n;
+    b.title = n ? n + ' words' : 'Nothing uploaded for ' + lv + ' yet';
+    b.setAttribute('aria-pressed', String(view==='level' && pf.lv===lv));
+    b.onclick = ()=>{ pf.lv = lv; view = 'level'; saveProfile(); refreshHome(); };
+    lb.appendChild(b);
+  });
+
+  $('view-upload').classList.toggle('hidden', view!=='upload');
+  $('view-settings').classList.toggle('hidden', view!=='settings');
+  $('view-level').classList.toggle('hidden', view!=='level' || !pf.lv);
+  if(view==='upload') return renderUpload();
+  if(view==='settings') return renderSettings();
+  if(!pf.lv) return;
+
+  // book choice
+  $('lvTitle').textContent = 'Primary ' + pf.lv.slice(1);
+  const have = booksOf(pf.lv), bc = $('bookChips'); bc.innerHTML = '';
+  const pick = (label, on, fn) => { const b = el('button', 'pick' + (on ? ' on' : ''), label); b.onclick = fn; return b; };
+  const setBooks = bks => ()=>{ pf.bk = bks; pf.chs[pf.lv] = null; saveProfile(); refreshHome(); };
+  have.forEach(b => bc.appendChild(pick('Book ' + b, pf.bk.length===1 && pf.bk[0]===b, setBooks([b]))));
+  if(have.length > 1) bc.appendChild(pick('Both books', pf.bk.length===have.length, setBooks(have.slice())));
+  $('bookNote').textContent = have.length === 1 ? 'Only Book ' + have[0] + ' has been uploaded for ' + pf.lv + '.' : '';
+
+  // chapter checklist
+  const chs = chaptersOf(pf.lv, pf.bk), on = pf.chs[pf.lv];
+  const list = $('chList'); list.innerHTML = '';
+  chs.forEach(c=>{
+    const lab = el('label', 'check'), box = el('input');
+    box.type = 'checkbox'; box.checked = on.includes(c.key);
+    box.onchange = ()=>{
+      const cur = pf.chs[pf.lv];
+      pf.chs[pf.lv] = box.checked ? chs.map(x=>x.key).filter(k => k===c.key || cur.includes(k)) : cur.filter(k => k!==c.key);
+      saveProfile(); refreshHome();
+    };
+    lab.appendChild(box); lab.appendChild(el('span', 'chname', c.label)); lab.appendChild(el('small', null, plural(c.count, 'word')));
+    list.appendChild(lab);
+  });
+  const allTicked = chs.length && on.length === chs.length;
+  $('chAll').textContent = allTicked ? 'Clear all' : 'Select all';
+  $('chAll').onclick = ()=>{ pf.chs[pf.lv] = allTicked ? [] : chs.map(c=>c.key); saveProfile(); refreshHome(); };
+  $('chCount').textContent = on.length + ' of ' + chs.length + ' chapters';
+
+  // stats for the selected words
+  const words = selWords(), total = words.length;
   const c = {new:0, learning:0, mastered:0};
   words.forEach(o => c[statusOf(o.w)]++);
   $('stTotal').textContent = total; $('stNew').textContent = c.new;
   $('stLearn').textContent = c.learning; $('stMaster').textContent = c.mastered;
   $('masterBar').style.width = (total ? c.mastered/total*100 : 0) + '%';
 
-  // one choice: a number of mixed words, or all of one list
+  // how many words: a number of mixed words, all selected words, or the learning words
+  if(pf.mode==='learn' && !c.learning) pf.mode = 'n';
   $('pickers').classList.toggle('hidden', !total);
-  const pick = (label, on, fn) => { const b = el('button', 'pick' + (on ? ' on' : ''), label); b.onclick = fn; return b; };
   const pc = $('pickChips'); pc.innerHTML = '';
-  COUNT_CHOICES.forEach(n => pc.appendChild(pick(String(n), !pf.set && !pf.learn && pf.n===n, ()=>{ pf.set = null; pf.learn = false; pf.n = n; saveProfile(); refreshHome(); })));
-  names.forEach(name => pc.appendChild(pick('All of ' + name + ' (' + wordsIn(name).length + ')', !pf.learn && pf.set===name, ()=>{ pf.learn = false; pf.set = name; saveProfile(); refreshHome(); })));
-  if(c.learning) pc.appendChild(pick('Learning words (' + c.learning + ')', !!pf.learn, ()=>{ pf.learn = true; saveProfile(); refreshHome(); }));
+  const allOn = pf.mode==='all' || (pf.mode==='n' && pf.n >= total);   // asking for more words than are selected = all of them
+  COUNT_CHOICES.filter(n => n < total).forEach(n => pc.appendChild(pick(String(n), pf.mode==='n' && pf.n===n, ()=>{ pf.mode = 'n'; pf.n = n; saveProfile(); refreshHome(); })));
+  pc.appendChild(pick('All ' + total, allOn, ()=>{ pf.mode = 'all'; saveProfile(); refreshHome(); }));
+  if(c.learning) pc.appendChild(pick('Learning words (' + c.learning + ')', pf.mode==='learn', ()=>{ pf.mode = 'learn'; saveProfile(); refreshHome(); }));
 
-  $('homeMsg').textContent = !total ? 'Upload a word list to begin.'
-    : pf.learn ? 'The ' + c.learning + ' words read wrongly before. Read one correctly and it moves to Mastered.'
-    : pf.set ? 'Every word in ' + pf.set + ', in random order.'
-    : Math.min(pf.n, total) + ' words mixed from ' + (names.length > 1 ? 'all ' + names.length + ' lists' : 'your list') + ' · learning words come first (' + c.learning + ' learning, ' + c.new + ' new).';
+  $('homeMsg').textContent = !total ? 'Tick at least one chapter to begin.'
+    : pf.mode==='learn' ? 'The ' + c.learning + ' selected words read wrongly before. Read one correctly and it moves to Mastered.'
+    : allOn ? 'Every selected word (' + total + '), in random order.'
+    : Math.min(pf.n, total) + ' words mixed from the selected chapters · learning words come first (' + c.learning + ' learning, ' + c.new + ' new).';
   $('startBtn').disabled = !total;
+}
 
-  // the lists themselves
-  const list = $('setList'); list.innerHTML = '';
-  names.forEach(n=>{
-    const ws = profile.words.filter(o => setOf(o)===n);
-    const done = ws.filter(o => statusOf(o.w)==='mastered').length;
+/* ---------- upload page ---------- */
+function renderUpload(){
+  const list = $('bookList'); list.innerHTML = '';
+  const groups = [];
+  LEVELS.forEach(lv => booksOf(lv).forEach(bk => groups.push({lv, bk})));
+  groups.forEach(g=>{
+    const ws = profile.words.filter(o => o.lv===g.lv && o.bk===g.bk);
+    const nch = new Set(ws.map(chKey)).size, done = ws.filter(o => statusOf(o.w)==='mastered').length;
     const row = el('div'), info = el('span', 'info'), acts = el('span', 'acts');
-    info.appendChild(el('span', null, n));
-    info.appendChild(el('small', null, ws.length + ' words · ' + done + ' mastered'));
+    info.appendChild(el('span', null, g.lv + ' · Book ' + g.bk));
+    info.appendChild(el('small', null, plural(nch, 'chapter') + ' · ' + plural(ws.length, 'word') + ' · ' + done + ' mastered'));
     const btn = (t, fn) => { const b = el('button', 'small grey', t); b.onclick = fn; acts.appendChild(b); };
-    btn('View', ()=> openSheet(n, ws));
-    btn('Rename', ()=> renameSet(n));
-    btn('Delete', ()=> deleteSet(n, ws.length));
+    btn('View', ()=> openSheet(g.lv + ' · Book ' + g.bk, ws));
+    btn('Delete', ()=> deleteBook(g.lv, g.bk, ws.length));
     row.appendChild(info); row.appendChild(acts); list.appendChild(row);
   });
+  $('bookNone').classList.toggle('hidden', groups.length > 0);
 }
-
-function renameSet(old){
-  const name = (prompt('New name for "' + old + '":', old) || '').trim();
-  if(!name || name === old) return;
-  if(setNames().includes(name) && !confirm('"' + name + '" already exists. Merge the two lists?')) return;
-  profile.words.forEach(o => { if(setOf(o)===old) o.s = name; });
-  if(profile.prefs && profile.prefs.set === old) profile.prefs.set = name;
-  saveProfile(true); refreshHome();
-}
-function deleteSet(name, count){
-  if(!confirm('Delete "' + name + '" and its ' + count + ' words? Their progress is deleted too.')) return;
-  profile.words = profile.words.filter(o => { if(setOf(o)!==name) return true; delete profile.progress[o.w]; return false; });
+function deleteBook(lv, bk, count){
+  if(!confirm('Delete ' + lv + ' Book ' + bk + ' and its ' + count + ' words? Their progress is deleted too.')) return;
+  profile.words = profile.words.filter(o => !(o.lv===lv && o.bk===bk));
+  pruneProgress();
   saveProfile(true); refreshHome();
 }
 
-/* ---------- word list sheet (tap a dashboard number, or "View" on a list) ---------- */
+/* ---------- word list sheet (tap a dashboard number, or "View" on a book) ---------- */
 const FILTER_TITLE = {all:'All words', new:'New words', learning:'Still learning', mastered:'Mastered'};
 function openSheet(title, words, note){
   $('sheetTitle').textContent = title;
   $('sheetNote').textContent = (note ? note + ' · ' : '') + words.length + (words.length===1 ? ' word' : ' words');
   const list = $('sheetList'); list.innerHTML = '';
-  const many = setNames().length > 1;
   words.forEach(o=>{
     const st = statusOf(o.w), p = profile.progress[o.w];
     const row = el('div'), info = el('span', 'info'), tags = el('span', 'tags');
@@ -612,7 +844,7 @@ function openSheet(title, words, note){
     const sub = [o.p, o.m].filter(Boolean).join(' · ');
     if(sub) info.appendChild(el('small', null, sub));
     if(p && p.wrong) tags.appendChild(el('span', 'tag', 'missed ' + p.wrong + '×'));
-    if(many) tags.appendChild(el('span', 'tag', setOf(o)));
+    const t = el('span', 'tag', chCode(o)); t.title = chLabel(o); tags.appendChild(t);
     tags.appendChild(el('span', 'tag ' + st, st));
     row.appendChild(info); row.appendChild(tags); list.appendChild(row);
   });
@@ -626,55 +858,153 @@ $('sheetBg').onclick = e => { if(e.target === $('sheetBg')) closeSheet(); };
 document.querySelectorAll('.stat[data-filter]').forEach(t=>{
   const open = ()=>{
     if(!profile) return;
-    const f = t.dataset.filter, words = profile.words.filter(o => f==='all' || statusOf(o.w)===f);
-    openSheet(FILTER_TITLE[f], words, setNames().length > 1 ? 'All lists' : '');
+    const f = t.dataset.filter, words = selWords().filter(o => f==='all' || statusOf(o.w)===f);
+    openSheet(FILTER_TITLE[f], words, 'Selected chapters');
   };
   t.onclick = open;
   t.onkeydown = e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(); } };
 });
+$('navUpload').onclick = ()=>{ view = 'upload'; refreshHome(); };
+$('navSettings').onclick = ()=>{ view = 'settings'; refreshHome(); };
 
 /* ---------- Excel upload ---------- */
+// Row 1 holds the headings; columns can be in any order. Chinese headings work too.
+const HEADINGS = {
+  ct:['chapter title','chapter name','title','lesson title','课题','课文','课文题目','题目','标题'],
+  lv:['level','primary','grade','年级','级别'],
+  bk:['book','册','书'],
+  ch:['chapter','chapter no','chapter number','chapter #','ch','lesson','unit','课','第几课','单元'],
+  w:['word','words','词语','词','字','生词','汉字','chinese','华文'],
+  p:['pinyin','拼音'],
+  m:['meaning','english','意思','解释','英文']
+};
+const normHead = s => String(s||'').trim().toLowerCase().replace(/[.:：]+$/,'').replace(/\s+/g,' ');
+function findColumns(row){
+  const col = {};
+  row.forEach((cell, i)=>{
+    const h = normHead(cell);
+    for(const k in HEADINGS){ if(col[k] == null && HEADINGS[k].includes(h)){ col[k] = i; break; } }
+  });
+  return col;
+}
+const CN_NUM = {'一':1,'二':2,'三':3,'四':4,'五':5,'六':6};
+function normLevel(v){
+  const s = String(v||'').trim().toUpperCase();
+  const d = s.match(/[1-6]/) || s.match(/[一二三四五六]/);
+  return d ? 'P' + (CN_NUM[d[0]] || d[0]) : null;
+}
+function normBook(v){
+  const s = String(v||'').trim().toUpperCase();
+  if(/上/.test(s)) return 'A';
+  if(/下/.test(s)) return 'B';
+  const m = s.match(/([AB])\s*$/) || s.match(/^(?:BOOK\s*|[1-6]\s*)?([AB])\b/);
+  return m ? m[1] : null;
+}
+function normChapter(v){
+  const m = String(v||'').match(/(\d+)\s*$/) || String(v||'').match(/(\d+)/);
+  const n = m ? parseInt(m[1], 10) : NaN;
+  return n > 0 ? n : null;
+}
+const normTitle = v => String(v||'').trim().replace(/^[《<〈「“"]+|[》>〉」”"]+$/g, '').trim();
+
+let pending = null;   // a file that has been read but not saved yet
+function readWordFile(rows){
+  const col = findColumns(rows[0] || []);
+  const need = ['lv','bk','ch','w'].filter(k => col[k] == null);
+  if(need.length){
+    const names = {lv:'Level', bk:'Book', ch:'Chapter', w:'Word'};
+    throw new Error('row 1 needs the headings Level, Book, Chapter, Chapter title, Word, Pinyin, Meaning (missing: ' + need.map(k=>names[k]).join(', ') + '). Download the template to see the layout.');
+  }
+  const out = [], seen = new Set(), bad = [];
+  rows.slice(1).forEach((r, i)=>{
+    const get = k => col[k] == null ? '' : r[col[k]];
+    const w = String(get('w')||'').trim();
+    if(!w) return;
+    const lv = normLevel(get('lv')), bk = normBook(get('bk')), ch = normChapter(get('ch'));
+    if(!lv || !bk || !ch){ bad.push(i + 2); return; }
+    const key = [lv, bk, ch, w].join('|');
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push({w, p:String(get('p')||'').trim(), m:String(get('m')||'').trim(), lv, bk, ch, ct:normTitle(get('ct'))});
+  });
+  // one title per chapter: fill in rows where it was left blank
+  const titles = {};
+  out.forEach(o => { const k = o.lv + chKey(o); if(o.ct && !titles[k]) titles[k] = o.ct; });
+  out.forEach(o => { if(!o.ct) o.ct = titles[o.lv + chKey(o)] || ''; });
+  return {words:out, bad};
+}
+
 $('uploadBtn').onclick = ()=> $('fileIn').click();
 $('fileIn').onchange = async e=>{
   const f = e.target.files[0]; e.target.value = '';
-  const msg = $('uploadMsg'); msg.className = 'msg';
+  const msg = $('uploadMsg'); msg.className = 'msg'; msg.textContent = '';
+  pending = null; renderPreview();
   if(!f) return;
   try{
     if(!window.XLSX) throw new Error('Excel reader did not load (check internet).');
     const wb = XLSX.read(await f.arrayBuffer(), {type:'array'});
     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, defval:''});
-    const heads = ['word','words','词语','词','字','生词','汉字','chinese','华文'];
-    const out = [], seen = new Set();
-    rows.forEach((r,i)=>{
-      const w = String(r[0]||'').trim();
-      if(!w || (i===0 && heads.includes(w.toLowerCase())) || seen.has(w)) return;
-      seen.add(w);
-      out.push({w, p:String(r[1]||'').trim(), m:String(r[2]||'').trim()});
-    });
-    if(!out.length) throw new Error('No words found in column A.');
-    const setName = $('setNameIn').value.trim() || f.name.replace(/\.[^.]+$/, '') || DEFAULT_SET;
-    const have = new Map(profile.words.map(o=>[o.w,o]));
-    let added = 0, dup = 0;
-    out.forEach(o=>{
-      if(have.has(o.w)){ const x = have.get(o.w); x.p = o.p || x.p; x.m = o.m || x.m; dup++; }   // a word lives in one list only
-      else{ o.s = setName; profile.words.push(o); added++; }
-    });
-    $('setNameIn').value = '';
-    saveProfile(true); refreshHome();
-    msg.classList.add('ok');
-    msg.textContent = '✓ ' + added + ' words added to "' + setName + '"' + (dup ? ' · ' + dup + ' were already in your lists and stayed where they were' : '') + '.';
+    const res = readWordFile(rows);
+    if(!res.words.length) throw new Error(res.bad.length ? 'no row has a Level (P1–P6), Book (A or B) and Chapter number.' : 'no words found under the Word heading.');
+    pending = {name:f.name, words:res.words, bad:res.bad};
+    renderPreview();
   }catch(err){
     msg.classList.add('err'); msg.textContent = 'Could not read file: ' + err.message;
   }
 };
+function renderPreview(){
+  $('preview').classList.toggle('hidden', !pending);
+  if(!pending) return;
+  $('pvName').textContent = pending.name;
+  const groups = new Map();
+  pending.words.forEach(o=>{
+    const k = o.lv + o.bk;
+    if(!groups.has(k)) groups.set(k, {lv:o.lv, bk:o.bk, words:0, chs:new Set()});
+    const g = groups.get(k); g.words++; g.chs.add(chKey(o));
+  });
+  const list = $('pvList'); list.innerHTML = '';
+  let replacing = 0;
+  [...groups.values()].sort((a,b)=> (a.lv+a.bk) < (b.lv+b.bk) ? -1 : 1).forEach(g=>{
+    const now = profile.words.filter(o => o.lv===g.lv && o.bk===g.bk).length;
+    if(now) replacing++;
+    const row = el('div'), info = el('span', 'info');
+    info.appendChild(el('span', null, g.lv + ' · Book ' + g.bk));
+    info.appendChild(el('small', null, plural(g.chs.size, 'chapter') + ' · ' + plural(g.words, 'word')));
+    row.appendChild(info);
+    row.appendChild(el('span', 'tag' + (now ? ' learning' : ''), now ? 'replaces ' + now + ' saved words' : 'new'));
+    list.appendChild(row);
+  });
+  $('pvNote').textContent = (replacing ? 'Saving replaces the books marked above. Words that are not in this file are removed with their progress; words still in it keep their progress. ' : '')
+    + (pending.bad.length ? pending.bad.length + ' row(s) skipped because Level, Book or Chapter was missing or unclear (row ' + pending.bad.slice(0,5).join(', ') + (pending.bad.length > 5 ? '…' : '') + ').' : '');
+}
+$('pvCancel').onclick = ()=>{ pending = null; renderPreview(); };
+$('pvSave').onclick = ()=>{
+  if(!pending) return;
+  const books = new Set(pending.words.map(o => o.lv + o.bk));
+  profile.words = profile.words.filter(o => !books.has(o.lv + o.bk)).concat(pending.words);
+  pruneProgress();
+  const pf = prefs(), first = pending.words[0];
+  pf.lv = first.lv; pf.bk = null;                                   // show the uploaded level, every book
+  [...books].forEach(k => { pf.chs[k.slice(0,2)] = null; });        // and every chapter
+  const msg = $('uploadMsg'); msg.className = 'msg ok';
+  msg.textContent = '✓ Saved ' + pending.words.length + ' words (' + [...books].sort().map(k => k.slice(0,2) + ' Book ' + k[2]).join(', ') + ').';
+  pending = null; renderPreview();
+  saveProfile(true); refreshHome();
+};
 $('tplBtn').onclick = ()=>{
   if(!window.XLSX){ alert('Excel library not loaded.'); return; }
-  const ws = XLSX.utils.aoa_to_sheet([['Word','Pinyin','Meaning'],['苹果','píng guǒ','apple'],['老师','lǎo shī','teacher'],['大','dà','big']]);
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Level','Book','Chapter','Chapter title','Word','Pinyin','Meaning'],
+    ['P2','A',9,'今天是晴天','乌云','wū yún','dark clouds'],
+    ['P2','A',9,'今天是晴天','热','rè','hot'],
+    ['P2','B',11,'你玩过这个游戏吗','纸飞机','zhǐ fēi jī','paper plane']
+  ]);
+  ws['!cols'] = [{wch:6},{wch:6},{wch:8},{wch:20},{wch:14},{wch:16},{wch:24}];
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Words');
   XLSX.writeFile(wb, 'chinese-words-template.xlsx');
 };
 $('resetBtn').onclick = ()=>{
-  if(confirm('Reset ALL progress for ' + profile.name + '? The word list is kept.')){
+  if(confirm('Reset ALL progress for ' + profile.name + '? The word lists are kept.')){
     profile.progress = {}; saveProfile(true); refreshHome();
   }
 };
@@ -854,9 +1184,9 @@ function buildQueue(words, n){
 }
 
 $('startBtn').onclick = ()=>{
-  const pf = choice();
-  const q = pf.learn ? shuffle(learningWords()).map(o => ({o, retry:0}))
-          : pf.set ? shuffle(wordsIn(pf.set)).map(o => ({o, retry:0})) : buildQueue(profile.words, pf.n);
+  const pf = prefs(), sel = selWords();
+  const q = pf.mode==='learn' ? shuffle(learningWords()).map(o => ({o, retry:0}))
+          : pf.mode==='all' ? shuffle(sel.slice()).map(o => ({o, retry:0})) : buildQueue(sel, pf.n);
   if(!q.length) return;
   sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
   micBlocked = false;
@@ -1007,10 +1337,10 @@ function finish(){ endSession(false); }
 
 function summary(){
   const res = sess.results, ok = res.filter(r=>r.ok).length, bad = res.filter(r=>!r.ok);
-  const mastered = profile.words.filter(o => statusOf(o.w) === 'mastered').length;
+  const sel = selWords(), mastered = sel.filter(o => statusOf(o.w) === 'mastered').length;
   $('sumEmoji').textContent = bad.length===0 ? '🏆' : ok >= bad.length ? '🌟' : '💪';
   $('sumTitle').textContent = bad.length===0 ? 'Perfect! 太棒了！' : 'Well done! 做得好！';
-  $('sumLine').textContent = ok + ' of ' + res.length + ' read correctly on the first try. Mastered so far: ' + mastered + ' / ' + profile.words.length + '.';
+  $('sumLine').textContent = ok + ' of ' + res.length + ' read correctly on the first try. Mastered in the selected chapters: ' + mastered + ' / ' + sel.length + '.';
   $('reviseBlock').classList.toggle('hidden', !bad.length);
   const box = $('reviseList'); box.innerHTML = '';
   bad.forEach(r=>{

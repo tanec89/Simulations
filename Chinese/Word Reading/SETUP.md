@@ -1,13 +1,22 @@
 # Chinese Word Reading – setup
 
 ## Excel format
-One word per row. Columns (only the first is required):
+Row 1 holds the headings (any column order; Chinese headings such as 年级 / 册 / 课 / 词语 also work). One word per row after that:
 
-| Word | Pinyin (optional) | Meaning (optional) |
-|------|-------------------|--------------------|
-| 苹果 | píng guǒ          | apple              |
+| Level | Book | Chapter | Chapter title | Word | Pinyin (optional) | Meaning (optional) |
+|-------|------|---------|---------------|------|-------------------|--------------------|
+| P2    | A    | 9       | 今天是晴天     | 乌云 | wū yún            | dark clouds        |
 
-A header row is detected and skipped. `.xlsx`, `.xls` and `.csv` all work. The app has a "Download template" button.
+- **Level**: P1–P6 (`2`, `Primary 2` also work). **Book**: A or B. **Chapter**: the number (`9`, `09` or `2A_09`).
+- The app shows that chapter as **2A_09 《今天是晴天》**, the same as the label on the flash card.
+- One file can hold several books (for example P2 Book A and Book B). Uploading a book again **replaces** that book: words no longer in the file are removed with their progress; words still in it keep their progress.
+- Rows with a missing or unclear Level, Book or Chapter are skipped, and the app says which rows.
+- `.xlsx`, `.xls` and `.csv` all work. The app has a "Download template" button.
+
+## Using it
+- **Upload File** (left) opens the upload page: choose the file, check the preview, then Save.
+- **Level P1–P6** (left): pick a level, then Book A, Book B or Both books, then tick the chapters. The word counts and "How many words today?" follow what is ticked.
+- Lists uploaded with the old one-column format (before version 8) are cleared when the child logs in; upload them again in the new format.
 
 ## Sync across devices (Firebase, free tier)
 1. Go to <https://console.firebase.google.com> → **Add project** (no Analytics needed).
