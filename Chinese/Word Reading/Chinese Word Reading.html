@@ -59,6 +59,29 @@
   .hidden{ display:none !important; }
   /* login page: illustrated background (sky in the middle keeps the card readable) */
   body.on-login{ background:#BFE3FA url("login-bg.webp?v=3") center bottom / cover no-repeat fixed; }
+  /* reading session: calm sky gradient with soft clouds in the corners only, clear in the middle for the flashcard */
+  body.in-session{
+    --cloud:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'%3E%3Cg fill='%23fff' fill-opacity='0.8'%3E%3Ccircle cx='62' cy='62' r='30'/%3E%3Ccircle cx='98' cy='46' r='38'/%3E%3Ccircle cx='142' cy='62' r='27'/%3E%3Crect x='36' y='60' width='132' height='32' rx='16'/%3E%3C/g%3E%3C/svg%3E");
+    --sky:linear-gradient(180deg, #BFE2FF 0%, #DCEFFF 38%, #F3F9FF 72%, #FFFFFF 100%);
+    --glow:rgba(255,255,255,0.7);
+    background:
+      var(--cloud) left -72px top 72px / 300px auto no-repeat,
+      var(--cloud) left 120px top 24px / 150px auto no-repeat,
+      var(--cloud) right -56px top 120px / 260px auto no-repeat,
+      var(--cloud) left -40px bottom 48px / 240px auto no-repeat,
+      var(--cloud) right -80px bottom 96px / 340px auto no-repeat,
+      var(--cloud) right 180px bottom 20px / 140px auto no-repeat,
+      radial-gradient(900px 520px at 50% 45%, var(--glow), transparent 70%),
+      var(--sky);
+    background-attachment:fixed;
+  }
+  @media (prefers-color-scheme:dark){
+    body.in-session{
+      --cloud:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 100'%3E%3Cg fill='%23fff' fill-opacity='0.08'%3E%3Ccircle cx='62' cy='62' r='30'/%3E%3Ccircle cx='98' cy='46' r='38'/%3E%3Ccircle cx='142' cy='62' r='27'/%3E%3Crect x='36' y='60' width='132' height='32' rx='16'/%3E%3C/g%3E%3C/svg%3E");
+      --sky:linear-gradient(180deg, #0E2240 0%, #08162B 50%, #000000 100%);
+      --glow:rgba(10,132,255,0.08);
+    }
+  }
   /* landing page after login (levels, upload): its own illustration; panels made more solid to stay readable */
   body.on-home{ background:#C7D3F4 url("home-bg.webp") center bottom / cover no-repeat fixed; }
   body.on-home .panel, body.on-home button.navbtn:not(.on){ background:rgba(255,255,255,0.86); }
@@ -261,6 +284,67 @@
   button.lvl.on{ background:var(--ink); color:var(--on-ink); }
   button.lvl.on small{ color:inherit; opacity:0.72; }
   button.lvl:disabled{ opacity:0.4; }
+  /* stars: results animation and totals (all drawn as SVG, no emoji) */
+  /* star.webp / star-jar.webp have empty space around the drawing, so images are sized larger than the star should look */
+  .big-star{ width:120px; height:120px; display:block; margin:-20px auto -12px; }
+  /* results intro: star bursts in, title pops up big then settles, score cards drop in */
+  .starwrap{ position:relative; width:120px; margin:0 auto; }
+  .starwrap .big-star{ opacity:0; }
+  .starwrap.go .big-star{ opacity:1; animation:starBurst 650ms cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes starBurst{ 0%{ transform:scale(0) rotate(-40deg); opacity:0; } 60%{ transform:scale(1.25) rotate(8deg); opacity:1; } 100%{ transform:scale(1) rotate(0); opacity:1; } }
+  .spark{ position:absolute; left:50%; top:50%; width:30px; height:30px; margin:-15px; pointer-events:none; }
+  .sumtitle{ position:relative; z-index:2; font-size:28px; opacity:0; }
+  .sumtitle.go{ animation:titlePop 1300ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  .sumtitle.done{ opacity:1; }
+  @keyframes titlePop{ 0%{ transform:scale(0.3); opacity:0; } 22%{ transform:scale(1.7); opacity:1; } 30%{ transform:scale(1.55); } 70%{ transform:scale(1.6); opacity:1; } 100%{ transform:scale(1); opacity:1; } }
+  .scorecards{ display:flex; justify-content:center; gap:12px; margin:16px auto 0; max-width:560px; }
+  .scard{ flex:1 1 0; min-width:0; background:var(--fill); border-radius:20px; padding:12px 16px 16px; opacity:0; }
+  .scard.go{ animation:dropIn 500ms cubic-bezier(0.34,1.56,0.64,1) both; }
+  .scard.done{ opacity:1; }
+  @keyframes dropIn{ from{ transform:translateY(-24px) scale(0.9); opacity:0; } to{ transform:none; opacity:1; } }
+  .slabel{ display:block; font-size:15px; font-weight:600; color:var(--ink2); }
+  .snum{ display:block; font-size:40px; font-weight:700; line-height:1.15; font-variant-numeric:tabular-nums; }
+  .snum .sof{ font-size:19px; font-weight:600; color:var(--ink2); }
+  .ministars{ display:flex; justify-content:center; flex-wrap:wrap; gap:0; min-height:30px; margin-top:4px; }
+  .ministars img{ width:34px; height:34px; margin:-4px -3px; opacity:0.22; filter:grayscale(1); transition:opacity 200ms, filter 200ms; }
+  .ministars img.lit{ opacity:1; filter:none; animation:pop 350ms var(--spring); }
+  .mbar{ height:14px; border-radius:7px; background:var(--material-border); overflow:hidden; margin-top:12px; }
+  .mbar > div{ height:100%; width:0; border-radius:7px; background:linear-gradient(90deg,#7ED957,#34C759); transition:width 900ms cubic-bezier(0.25,0.1,0.25,1); }
+  .starbox.wait, #reviseBlock.wait{ visibility:hidden; }
+  .starbox.go{ animation:rise 400ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  #reviseBlock.go{ animation:rise 400ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  #reviseBlock.go .w{ animation:wiggle 600ms 300ms ease-in-out both; }
+  @keyframes wiggle{ 0%,100%{ transform:rotate(0); } 25%{ transform:rotate(-4deg); } 50%{ transform:rotate(3deg); } 75%{ transform:rotate(-2deg); } }
+  img.star-img{ display:block; flex:none; object-fit:contain; }
+  .starbox{ display:flex; align-items:center; justify-content:center; gap:32px; margin:16px auto 8px; padding:16px 24px; max-width:560px;
+    background:var(--fill); border-radius:20px; cursor:pointer; text-align:left; }
+  .jarwrap{ position:relative; flex:none; width:150px; }
+  .jar{ width:170px; height:170px; display:block; margin:-14px -10px -10px; transform-origin:50% 85%; }
+  .jar.wobble{ animation:wobble 350ms cubic-bezier(0.25,0.1,0.25,1); filter:drop-shadow(0 0 14px rgba(255,200,40,0.7)); }
+  @keyframes wobble{ 0%,100%{ transform:rotate(0); } 30%{ transform:rotate(-4deg) scale(1.03); } 65%{ transform:rotate(3deg); } }
+  .jarcount{ text-align:center; margin-top:4px; }
+  .jarcount b{ display:block; font-size:32px; font-weight:700; line-height:1.1; color:var(--orange-text); font-variant-numeric:tabular-nums; }
+  .jarcount span{ font-size:13px; color:var(--ink2); font-weight:600; }
+  .starlines{ flex:1; min-width:0; }
+  .starlines ul{ list-style:none; margin:0; padding:0; }
+  .starlines li{ display:flex; justify-content:space-between; align-items:center; gap:16px; padding:8px 0; font-size:17px;
+    border-bottom:0.5px solid var(--material-border); animation:rise 300ms cubic-bezier(0.25,0.1,0.25,1) both; }
+  .starlines li b{ display:inline-flex; align-items:center; gap:4px; color:var(--orange-text); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  img.mini{ width:30px; height:30px; margin:-6px -4px; }
+  .grand{ display:flex; align-items:center; gap:8px; margin:12px 0 0; font-size:19px; font-weight:700; animation:pop 400ms var(--spring); }
+  .grand img.mini{ width:40px; height:40px; margin:-8px -6px; }
+  .skiphint{ margin:12px 0 0; font-size:13px; color:var(--ink2); }
+  .flyer{ position:fixed; z-index:3000; width:48px; height:48px; pointer-events:none; }
+  .flyer img{ width:100%; height:100%; }
+  @media (max-width:520px){ .starbox{ flex-direction:column; gap:12px; } .starlines{ width:100%; } }
+  /* star total on the landing page */
+  .greet-right{ display:flex; align-items:center; gap:12px; flex:none; }
+  .starpill{ display:inline-flex; align-items:center; gap:6px; height:40px; padding:0 14px; border-radius:20px; background:var(--fill);
+    font-size:19px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .starpill img{ width:40px; height:40px; margin:-8px -6px; }
+  .starpill small{ font-size:13px; font-weight:600; color:var(--green-text); }
+  @media (max-width:520px){ .starpill small{ display:none; } }
+
   /* mascots: one 1536×1024 sheet of 8 pandas (4 × 2 cells of 384×512); each element shows one cell */
   .mascot{ display:inline-block; aspect-ratio:3/4; background:url("mascots.webp") 0 0 / 400% 200% no-repeat; flex:none; }
   .hello-row{ display:flex; align-items:center; gap:8px; min-width:0; }
@@ -328,7 +412,10 @@
   <div id="screen-home" class="hidden">
     <div class="panel greeting topgreet">
       <div class="hello-row"><h2 id="hello">Hi!</h2><span class="mascot" id="helloMascot" role="img" aria-label="Mascot"></span></div>
-      <button class="small grey" id="logoutBtn">Log out</button>
+      <div class="greet-right">
+        <span class="starpill" id="starPill" title="Stars collected"></span>
+        <button class="small grey" id="logoutBtn">Log out</button>
+      </div>
     </div>
     <div class="layout">
     <aside class="side">
@@ -462,9 +549,31 @@
 
   <!-- SUMMARY -->
   <div id="screen-summary" class="panel sum hidden">
-    <div class="big-emoji" id="sumEmoji">🌟</div>
-    <h2 id="sumTitle">Well done!</h2>
-    <p class="note" id="sumLine"></p>
+    <div class="starwrap" id="starWrap"><img class="big-star" src="star.webp" alt=""></div>
+    <h2 class="sumtitle" id="sumTitle">Well done!</h2>
+    <div class="scorecards">
+      <div class="scard" id="cardFirst">
+        <span class="slabel">First try</span>
+        <b class="snum"><span id="ftNum">0</span><span class="sof"> / <span id="ftOf">0</span></span></b>
+        <div class="ministars" id="ftStars"></div>
+      </div>
+      <div class="scard" id="cardMaster">
+        <span class="slabel">Mastered</span>
+        <b class="snum"><span id="msNum">0</span><span class="sof"> / <span id="msOf">0</span> words</span></b>
+        <div class="mbar"><div id="msBar"></div></div>
+      </div>
+    </div>
+    <div class="starbox" id="starBox">
+      <div class="jarwrap">
+        <img class="jar" id="jar" src="star-jar.webp" alt="">
+        <div class="jarcount"><b id="sessStars">0</b><span>stars</span></div>
+      </div>
+      <div class="starlines">
+        <ul id="starLines"></ul>
+        <p class="grand hidden" id="grandLine"></p>
+        <p class="skiphint" id="skipHint">Tap to skip</p>
+      </div>
+    </div>
     <div id="reviseBlock">
       <h2 class="sub">Words to revise again</h2>
       <div class="revise" id="reviseList"></div>
@@ -484,7 +593,7 @@
 'use strict';
 
 /* ---------- constants ---------- */
-const APP_VERSION = '8';    // shown on screen so you can tell which version a device has loaded; bump on every release
+const APP_VERSION = '9';    // shown on screen so you can tell which version a device has loaded; bump on every release
 const TIME_LIMIT = 20;      // seconds to read a word
 const COUNT_CHOICES = [20, 40, 60, 80];          // "how many words today": a mix drawn from the selected chapters
 const COUNT_DEFAULT = 20;
@@ -728,6 +837,11 @@ function renderHome(){ show('home'); refreshHome(); }
 function refreshHome(){
   $('hello').textContent = 'Hi ' + profile.name + '!';
   paintMascot($('helloMascot'), mascotOf());
+  const todayStars = profile.today && profile.today.d === dayKey(new Date()) ? profile.today.stars : 0;
+  $('starPill').innerHTML = starSvg('') + '<span></span>' + (todayStars ? '<small></small>' : '');
+  $('starPill').children[1].textContent = (profile.stars || 0).toLocaleString();
+  if(todayStars) $('starPill').children[2].textContent = 'Today +' + todayStars.toLocaleString();
+  $('starPill').setAttribute('aria-label', (profile.stars || 0) + ' stars' + (todayStars ? ', ' + todayStars + ' today' : ''));
   const pf = prefs();
   if(!profile.words.length && view==='level') view = 'upload';
 
@@ -1004,8 +1118,9 @@ $('tplBtn').onclick = ()=>{
   XLSX.writeFile(wb, 'chinese-words-template.xlsx');
 };
 $('resetBtn').onclick = ()=>{
-  if(confirm('Reset ALL progress for ' + profile.name + '? The word lists are kept.')){
-    profile.progress = {}; saveProfile(true); refreshHome();
+  if(confirm('Reset ALL progress and stars for ' + profile.name + '? The word lists and mascot are kept.')){
+    profile.progress = {}; profile.stars = 0; profile.streak = {last:'', days:0}; profile.today = null; profile.history = [];
+    saveProfile(true); refreshHome();
   }
 };
 
@@ -1188,8 +1303,9 @@ $('startBtn').onclick = ()=>{
   const q = pf.mode==='learn' ? shuffle(learningWords()).map(o => ({o, retry:0}))
           : pf.mode==='all' ? shuffle(sel.slice()).map(o => ({o, retry:0})) : buildQueue(sel, pf.n);
   if(!q.length) return;
-  sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0 };
+  sess = { queue:q, i:0, results:[], phase:'', listening:false, timer:null, token:0, earn:{first:0, fixed:0, repeat:0} };
   micBlocked = false;
+  Chime.unlock();   // iPad only allows sound that was started from a tap
   show('session');
   // iPad only lets a page talk after speech has been started from a tap, so say "开始" on this tap,
   // and only switch the microphone on once it has finished
@@ -1248,6 +1364,7 @@ function record(correct){
   const o = sess.cur, p = prog(o.w), item = sess.item;
   p.last = Date.now();
   if(!item.retry){   // only the first read of a word in a session decides Mastered or Learning
+    if(correct){ sess.earn.first++; if(statusOf(o.w) === 'learning') sess.earn.fixed++; }   // stars: see STARS
     p.attempts++;
     if(correct){ p.right++; p.streak++; }    // read correctly: Mastered
     else{ p.wrong++; p.streak = 0; }         // read wrongly: Learning
@@ -1306,7 +1423,10 @@ function toPinyinTone(s){
 function repeatDone(ok){
   if(!sess || (sess.phase!=='repeat' && sess.phase!=='teach')) return;
   sess.phase = 'feedback'; clearTimer(); sess.listening = false; stopListen();
-  if(ok){ setStage('good'); $('promptEl').textContent = '👍 Good! We will try it again later.'; }
+  if(ok){
+    if(!sess.item.retry) sess.earn.repeat++;   // repeated after the app on the word's first appearance
+    setStage('good'); $('promptEl').textContent = '👍 Good! We will try it again later.';
+  }
   setTimeout(()=>{ if(sess && sess.phase==='feedback'){ sess.i++; nextWord(); } }, ok ? 1100 : 0);
 }
 
@@ -1329,18 +1449,77 @@ $('quitBtn').onclick = ()=>{
 function endSession(quit){
   if(sess){ clearTimer(); sess.listening = false; }
   stopListen(); try{ speechSynthesis.cancel(); }catch(e){}
+  if(quit && (!sess || !sess.results.length)){ saveProfile(true); sess = null; return renderHome(); }
+  const award = awardStars(quit);
   saveProfile(true);
-  if(quit && (!sess || !sess.results.length)){ sess = null; return renderHome(); }
-  summary();
+  summary(award);
 }
 function finish(){ endSession(false); }
 
-function summary(){
+/* ---------- stars ---------- */
+const STARS = { first:10, fixed:5, repeat:2, finish:20, perfect:20, streakPerDay:10, streakMax:50 };
+const dayKey = d => d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+// work out this session's stars, add them to the profile, and return the lines for the results animation
+function awardStars(quit){
+  const e = sess.earn, res = sess.results, lines = [];
+  if(e.first)  lines.push({label:plural(e.first, 'word') + ' read correctly', value:e.first*STARS.first, main:true});
+  if(e.fixed)  lines.push({label:'Learning ' + (e.fixed===1 ? 'word' : 'words') + ' fixed', value:e.fixed*STARS.fixed});
+  if(e.repeat) lines.push({label:'Repeated after me', value:e.repeat*STARS.repeat});
+  if(!quit) lines.push({label:'Finished!', value:STARS.finish});
+  if(!quit && res.length && res.every(r => r.ok)) lines.push({label:'Perfect!', value:STARS.perfect});
+  // first session of the day: streak bonus (consecutive days)
+  const now = new Date(), today = dayKey(now), y = new Date(now); y.setDate(y.getDate()-1);
+  const st = profile.streak || (profile.streak = {last:'', days:0});
+  if(st.last !== today){
+    st.days = st.last === dayKey(y) ? st.days + 1 : 1;
+    st.last = today;
+    lines.push({label:(st.days > 1 ? st.days + '-day streak!' : 'First practice today!'), value:Math.min(STARS.streakPerDay*st.days, STARS.streakMax)});
+  }
+  const total = lines.reduce((s, l) => s + l.value, 0);
+  profile.stars = (profile.stars || 0) + total;
+  if(!profile.today || profile.today.d !== today) profile.today = {d:today, stars:0};
+  profile.today.stars += total;
+  profile.history = (profile.history || []).concat({d:today, t:Date.now(), words:res.length, right:e.first, stars:total}).slice(-200);
+  return {lines, total, grand:profile.stars};
+}
+
+// a soft chime for each star, made in the browser (no sound file)
+const Chime = (()=>{
+  let ctx = null;
+  return {
+    unlock(){ try{ ctx = ctx || new (window.AudioContext || window.webkitAudioContext)(); if(ctx.state === 'suspended') ctx.resume(); }catch(e){} },
+    tada(big){   // a short rising "ta-da" arpeggio (C-E-G, plus high C for a perfect session)
+      [0, 4, 7].concat(big ? [12] : []).forEach((semi, i) => setTimeout(()=> this.note(523 * Math.pow(2, semi/12), 0.06, big ? 0.5 : 0.35), i * 90));
+    },
+    note(freq, vol, len){
+      if(!ctx) return;
+      try{
+        const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + len + 0.02);
+      }catch(e){}
+    },
+    play(step){
+      if(!ctx) return;
+      try{
+        const t = ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sine'; o.frequency.setValueAtTime(880 * Math.pow(2, (step % 8) / 12), t);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+        o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + 0.26);
+      }catch(e){}
+    }
+  };
+})();
+const starSvg = cls => '<img class="star-img' + (cls ? ' ' + cls : '') + '" src="star.webp" alt="">';
+
+function summary(award){
   const res = sess.results, ok = res.filter(r=>r.ok).length, bad = res.filter(r=>!r.ok);
   const sel = selWords(), mastered = sel.filter(o => statusOf(o.w) === 'mastered').length;
-  $('sumEmoji').textContent = bad.length===0 ? '🏆' : ok >= bad.length ? '🌟' : '💪';
-  $('sumTitle').textContent = bad.length===0 ? 'Perfect! 太棒了！' : 'Well done! 做得好！';
-  $('sumLine').textContent = ok + ' of ' + res.length + ' read correctly on the first try. Mastered in the selected chapters: ' + mastered + ' / ' + sel.length + '.';
+  const ratio = res.length ? ok / res.length : 0;
+  const tier = ratio === 1 ? {en:'Perfect!', cn:'太棒了！', big:true} : ratio > 0.7 ? {en:'Great job!', cn:'真棒！'}
+             : ratio >= 0.5 ? {en:'Well done!', cn:'做得好！'} : {en:'Keep going!', cn:'加油！'};
+  $('sumTitle').textContent = tier.en + ' ' + tier.cn;
   $('reviseBlock').classList.toggle('hidden', !bad.length);
   const box = $('reviseList'); box.innerHTML = '';
   bad.forEach(r=>{
@@ -1351,8 +1530,146 @@ function summary(){
   });
   show('summary');
   sess = null;
+  playIntro({tier, ok, total:res.length, mastered, of:sel.length}, award);
 }
-$('homeBtn').onclick = renderHome;
+$('homeBtn').onclick = e => { e.stopPropagation(); introRun.skip(); starRun.skip(); renderHome(); };
+
+/* results intro, in order: star bursts in → title pops up big and settles (said aloud) → score cards drop in
+   (counting up, a small star lights for each first-try word, the Mastered bar fills) → star jar → words to revise */
+let introRun = { skip(){} };
+function playIntro(info, award){
+  introRun.skip(); starRun.skip();
+  const wrap = $('starWrap'), title = $('sumTitle'), cards = [$('cardFirst'), $('cardMaster')];
+  const box = $('starBox'), revise = $('reviseBlock'), stars = $('ftStars');
+  const timers = [], at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  let done = false;
+  // reset to the start
+  wrap.classList.remove('go'); wrap.querySelectorAll('.spark').forEach(s => s.remove());
+  [title, ...cards].forEach(n => n.classList.remove('go', 'done'));
+  box.classList.remove('go'); box.classList.add('wait');
+  revise.classList.remove('go'); revise.classList.add('wait');
+  $('ftOf').textContent = info.total; $('msOf').textContent = info.of;
+  $('ftNum').textContent = '0'; $('msNum').textContent = '0'; $('msBar').style.width = '0';
+  // small stars: one per word, at most 10 (then each stands for several words)
+  const slots = Math.min(info.total, 10), lit = info.total ? Math.round(info.ok / info.total * slots) : 0;
+  stars.innerHTML = '';
+  for(let i = 0; i < slots; i++) stars.insertAdjacentHTML('beforeend', starSvg(''));
+  const countUp = (node, to, ms) => {   // timers, not animation frames, so the numbers always arrive
+    const t0 = Date.now();
+    const iv = setInterval(()=>{ const k = Math.min(1, (Date.now() - t0) / ms); node.textContent = Math.round(to * k); if(k >= 1 || done) clearInterval(iv); }, 30);
+  };
+  const finish = ()=>{
+    if(done) return; done = true;
+    timers.forEach(clearTimeout);
+    wrap.classList.add('go');
+    title.classList.remove('go'); title.classList.add('done');
+    cards.forEach(c => { c.classList.remove('go'); c.classList.add('done'); });
+    $('ftNum').textContent = info.ok; $('msNum').textContent = info.mastered;
+    $('msBar').style.width = (info.of ? info.mastered / info.of * 100 : 0) + '%';
+    [...stars.children].forEach((s, i) => s.classList.toggle('lit', i < lit));
+    box.classList.remove('wait');
+    revise.classList.remove('wait'); revise.classList.add('go');
+  };
+  // tapping anywhere skips: first the intro, then the star jar
+  $('screen-summary').onclick = ()=>{ if(!done){ finish(); playStars(award, null, true); } else starRun.skip(); };
+  introRun = { skip: finish };
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ finish(); return playStars(award, null, true); }
+
+  // 1. star bursts in with sparkles
+  at(50, ()=>{
+    wrap.classList.add('go'); Chime.tada(info.tier.big);
+    const n = info.tier.big ? 10 : 6;
+    for(let i = 0; i < n; i++){
+      wrap.insertAdjacentHTML('beforeend', starSvg('spark'));
+      const s = wrap.lastChild, a = (i / n) * Math.PI * 2, r = 70 + (i % 2) * 20;
+      s.animate([{transform:'translate(0,0) scale(0.2)', opacity:1}, {transform:'translate(' + Math.cos(a)*r + 'px,' + Math.sin(a)*r + 'px) scale(0.8)', opacity:0}],
+                {duration:700, delay:150, easing:'cubic-bezier(0.25,0.1,0.25,1)', fill:'both'}).onfinish = ()=> s.remove();
+    }
+  });
+  // 2. title pops up big, then settles; the Chinese is said aloud
+  at(450, ()=>{ title.classList.add('go'); speak(info.tier.cn.replace(/！/g, '')); });
+  // 3. score cards drop in and count up
+  at(1700, ()=>{ cards[0].classList.add('go'); countUp($('ftNum'), info.ok, 500);
+    [...stars.children].slice(0, lit).forEach((s, i) => at(200 + i*120, ()=>{ s.classList.add('lit'); Chime.play(i); })); });
+  at(1900, ()=>{ cards[1].classList.add('go'); countUp($('msNum'), info.mastered, 700);
+    at(30, ()=>{ $('msBar').style.width = (info.of ? info.mastered / info.of * 100 : 0) + '%'; }); });
+  // 4. star jar, then 5. words to revise
+  at(2300 + lit*120, ()=>{
+    if(done) return; done = true;   // intro finished on its own
+    [title, ...cards].forEach(n => { n.classList.remove('go'); n.classList.add('done'); });
+    $('ftNum').textContent = info.ok; $('msNum').textContent = info.mastered;
+    box.classList.remove('wait'); box.classList.add('go');
+    playStars(award, ()=>{ revise.classList.remove('wait'); revise.classList.add('go'); });
+  });
+}
+
+/* results animation: stars fly from the big star into the jar, the counter ticks up, bonus lines appear one by one */
+let starRun = { skip(){} };
+function playStars(award, onDone, instant){
+  starRun.skip();
+  const list = $('starLines'), count = $('sessStars'), jar = $('jar');
+  list.innerHTML = ''; count.textContent = '0';
+  $('grandLine').classList.add('hidden'); $('skipHint').classList.remove('hidden');
+  let shown = 0, done = false;
+  const timers = [], flyers = [];
+  const setCount = n => { shown = n; count.textContent = n.toLocaleString(); };
+  const addLine = l => {
+    const li = document.createElement('li');
+    li.innerHTML = '<span></span><b>+' + l.value + starSvg('mini') + '</b>';
+    li.firstChild.textContent = l.label;
+    list.appendChild(li);
+  };
+  const finishAll = ()=>{
+    if(done) return; done = true;
+    timers.forEach(clearTimeout); flyers.forEach(f => f.remove());
+    list.innerHTML = ''; award.lines.forEach(addLine);
+    setCount(award.total);
+    $('grandLine').innerHTML = starSvg('mini') + '<span></span>';
+    $('grandLine').lastChild.textContent = 'Total stars: ' + award.grand.toLocaleString();
+    $('grandLine').classList.remove('hidden'); $('skipHint').classList.add('hidden');
+    if(onDone) onDone();
+  };
+  starRun = { skip: finishAll };
+  if(instant || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return finishAll();
+
+  // one flying star: from the big star at the top into the jar's mouth
+  const fly = (value, delay, step) => timers.push(setTimeout(()=>{
+    if(done) return;
+    const from = document.querySelector('.big-star').getBoundingClientRect(), to = jar.getBoundingClientRect();
+    const f = document.createElement('div'); f.className = 'flyer'; f.innerHTML = starSvg('');
+    const sx = from.left + from.width/2 - 24, sy = from.top + from.height/2 - 24;   // flyer is 48px
+    const ex = to.left + to.width/2 - 24 + ((step*13) % 30 - 15), ey = to.top + to.height*0.32;   // into the jar under the lid
+    f.style.left = sx + 'px'; f.style.top = sy + 'px';
+    document.body.appendChild(f); flyers.push(f);
+    const dx = ex - sx, dy = ey - sy;
+    const anim = f.animate([
+      {transform:'translate(0,0) scale(0.6) rotate(0deg)', opacity:0},
+      {transform:'translate(' + dx*0.45 + 'px,' + (dy*0.2 - 70) + 'px) scale(1.15) rotate(160deg)', opacity:1, offset:0.45},
+      {transform:'translate(' + dx + 'px,' + dy + 'px) scale(0.7) rotate(320deg)', opacity:1}
+    ], {duration:650, easing:'cubic-bezier(0.4,0,0.2,1)'});
+    anim.onfinish = ()=>{
+      f.remove(); if(done) return;
+      setCount(shown + value); Chime.play(step);
+      jar.classList.remove('wobble'); void jar.getBoundingClientRect(); jar.classList.add('wobble');
+    };
+  }, delay));
+
+  // schedule: each line sends a few stars (its value split between them), one after another
+  let t = 300, step = 0;
+  award.lines.forEach(l=>{
+    const n = l.main ? Math.min(15, Math.max(1, Math.round(l.value / 10))) : 3;
+    const gap = l.main ? 140 : 160;
+    timers.push(setTimeout(()=>{ if(!done) addLine(l); }, t));
+    let left = l.value;
+    for(let i = 0; i < n; i++){
+      const v = i === n-1 ? left : Math.floor(l.value / n); left -= v;
+      fly(v, t + 150 + i*gap, step++);
+    }
+    t += 150 + n*gap + 650 + 250;
+  });
+  timers.push(setTimeout(finishAll, t + 200));
+}
 
 /* ---------- sound test ---------- */
 $('soundTestBtn').onclick = ()=>{
